@@ -7,4 +7,6 @@ p:add({"ls", "-al"})
  :add({"uniq", "-c"}, { stderr = fd })
  :add({"cat"})
 
-p:exec({wait = false})
+p:exec({wait = true})
+
+print(p)

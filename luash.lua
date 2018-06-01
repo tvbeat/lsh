@@ -1,4 +1,4 @@
-local S    = require "syscall"
+local S    = require 'syscall'
 local libc = require 'luash.libc'
 
 local table_new = require 'table.new'
@@ -6,7 +6,7 @@ local table_new = require 'table.new'
 --- execute program
 -- @param cmd
 -- @param[opt] args
--- @param[opt] options 
+-- @param[opt] options
 local function spawn_proc(cmd, in_, out_, err_)
   local pid = S.fork()
 
@@ -29,7 +29,7 @@ local function spawn_proc(cmd, in_, out_, err_)
     --TODO: handle gracefully
     local ret = libc.execvp(cmd[1], cmd)
     print("execvp ret is:", ret)
-    os.exit(1) 
+    os.exit(1)
     return
   end
 
@@ -67,7 +67,22 @@ local function pipes(cmds)
 end
 
 local _M = {}
-local mt = { __index = _M }
+local mt = {
+  __index = _M,
+  __tostring = function(t)
+    local len = #t.cmds
+    local res = {}
+    local ret = table_new(len, 0)
+
+    for i=1,len do
+      local sc = t.ret_code and t.ret_code[i] or '?'
+      local cmd = table.concat(t.cmds[i][1], ' ')
+      table.insert(ret, string.format('"%s" -> %s', cmd, sc))
+    end
+
+    return table.concat(ret, '\n')
+  end
+}
 
 function _M.pipeline()
   return setmetatable({cmds = {}}, mt)
@@ -78,26 +93,38 @@ function _M.add(self, x, opt)
   return self
 end
 
-function _M.exec(self, wait)
+function _M.exec(self, opt)
   local cmds_opts     = self.cmds
   local cmds_opts_len = #cmds_opts
   local cmds          = table_new(cmds_opts_len, 0)
 
-  for i=1,cmds_opts_len do 
+  for i=1,cmds_opts_len do
     -- TODO: implement options
     cmds[i] = cmds_opts[i][1]
   end
 
-  local pids = pipes(cmds)
+  self.pids = pipes(cmds)
 
-  local ret = table_new(cmds_opts_len, 0)
-  for i=1,cmds_opts_len do
-    local r, err, status = S.waitpid(pids[i], "ALL")
-    -- TODO: normalize
-    ret[i] = status
+  if opt and opt.wait then
+    return _M.wait(self)
   end
 
-  return ret
+  return self
+end
+
+function _M.wait(self)
+  local pids_len = #self.pids
+  local ret_code = table_new(pids_len, 0)
+
+  for i=1,pids_len do
+    local r, err, status = S.waitpid(self.pids[i], "ALL")
+    -- TODO: normalize
+    ret_code[i] = status.status
+  end
+
+  self.ret_code = ret_code
+
+  return self
 end
 
 return _M
