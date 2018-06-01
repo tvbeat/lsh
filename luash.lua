@@ -1,27 +1,7 @@
-local posix = require 'posix'
-local ffi   = require 'ffi'
-local S = require "syscall"
+local S    = require "syscall"
+local libc = require 'luash.libc'
 
 local table_new = require 'table.new'
-
-ffi.cdef [[
-  int execvp(const char *, const char* []);
-]]
-
-local C = ffi.C
-local string_array = ffi.typeof("const char* [?]")
-
--- used for no return value, return true for use of assert
-local function retbool(ret, err)
-  if ret == -1 then return nil, error() end
-  return true
-end
-
-local function execvp(cmdname, args)
-  local cargs = string_array(#args + 1, args or {})
-  cargs[#args] = nil
-  retbool(C.execvp(cmdname, cargs))
-end
 
 --- execute program
 -- @param cmd
@@ -47,7 +27,7 @@ local function spawn_proc(cmd, in_, out_, err_)
     end
 
     --TODO: handle gracefully
-    local ret = execvp(cmd[1], cmd)
+    local ret = libc.execvp(cmd[1], cmd)
     print("execvp ret is:", ret)
     os.exit(1) 
     return
@@ -119,18 +99,5 @@ function _M.exec(self, wait)
 
   return ret
 end
-  
-local pipeline = _M.pipeline()
 
-local res = pipeline:add({"ls", "-al"})
-                    :add({"sort"})
-                    :add({"uniq", "-c"}, { stderr = fd })
-                    :add({"sort", "-u"})
-                    :exec({wait = false, })
-
-print('bla')
-for i=1,#res do
-  for k,v in pairs(res[i]) do
-    print(k,v)
-  end
-end
+return _M
