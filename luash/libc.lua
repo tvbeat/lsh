@@ -46,20 +46,20 @@ local glob_ret_codes = setmetatable({
 
 function _M.glob(str)
 
-  -- TODO: properly free
   local results = ffi.new('glob_t[1]')
+  -- TODO: handlers
   local ret = C.glob(str, 0, function(path, eerrno) print(path, eerrno) end, results)
   if ret ~= 0 then return nil, glob_ret_codes[ret] end
 
   local len = tonumber(results[0].gl_pathc)
-  local result = table_new(len, 0)
+  local res = table_new(len, 0)
   for i=0,len-1 do
-    result[i+1] = ffi.string(results[0].gl_pathv[i])
+    res[i+1] = ffi.string(results[0].gl_pathv[i])
   end
 
   C.globfree(results)
 
-  return result
+  return res
 end
 
 return _M

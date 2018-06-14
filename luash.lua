@@ -84,6 +84,24 @@ local mt = {
   end
 }
 
+local function glob_cmd(cmd)
+  local cmd_len = #cmd
+  local cmd_globbed = table_new(cmd_len, 0)
+
+  for i=1,cmd_len do
+    local cmd_part = cmd[i]
+    local res, err = libc.glob(cmd_part)
+
+    if err then
+      table.insert(cmd_globbed, cmd_part)
+    else
+      for y=1,#res do table.insert(cmd_globbed, res[y]) end
+    end
+  end
+
+  return cmd_globbed
+end
+
 function _M.pipeline()
   return setmetatable({cmds = {}}, mt)
 end
@@ -100,7 +118,8 @@ function _M.exec(self, opt)
 
   for i=1,cmds_opts_len do
     -- TODO: implement options
-    cmds[i] = cmds_opts[i][1]
+    local cmd = cmds_opts[i][1]
+    cmds[i] = glob_cmd(cmd)
   end
 
   self.pids = pipes(cmds)

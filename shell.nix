@@ -8,7 +8,6 @@ stdenv.mkDerivation rec {
   name = "luash";
   buildInputs = [
     luajit
-    luajitPackages.luaposix
     luajitPackages.syscall
   ];
 
