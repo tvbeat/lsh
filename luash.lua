@@ -2,6 +2,7 @@ local S    = require 'syscall'
 local libc = require 'luash.libc'
 
 local table_new = require 'table.new'
+local table = table
 
 --- execute program
 -- @param cmd
@@ -66,23 +67,12 @@ local function pipes(cmds)
   return pids
 end
 
-local _M = {}
-local mt = {
-  __index = _M,
-  __tostring = function(t)
-    local len = #t.cmds
-    local res = {}
-    local ret = table_new(len, 0)
-
-    for i=1,len do
-      local sc = t.ret_code and t.ret_code[i] or '?'
-      local cmd = table.concat(t.cmds[i][1], ' ')
-      table.insert(ret, string.format('"%s" -> %s', cmd, sc))
-    end
-
-    return table.concat(ret, '\n')
-  end
-}
+local function wait(pid)
+  local r, err, status = S.waitpid(pid, "ALL")
+  -- TODO: normalize, handle
+  local exit_status = status and status.status or nil
+  return exit_status
+end
 
 local function glob_cmd(cmd)
   local cmd_len = #cmd
@@ -102,46 +92,104 @@ local function glob_cmd(cmd)
   return cmd_globbed
 end
 
+local _M = {}
+
+-- exec --
+
+local exec = {}
+
+local exec_mt = {
+  __index = exec,
+  __tostring = function(t)
+    local es = t.exit_status or '?'
+    local cmd = table.concat(t.cmd, ' ')
+    return string.format('"%s" -> %s', cmd, es)
+  end
+}
+
+function _M.exec(cmd, opt)
+  assert(type(cmd) == "table")
+  if opt then assert(type(opt) == "table") end
+
+  local opt_ = opt or {}
+  local cmd_ = opt_.noglob and cmd or glob_cmd(cmd)
+  local exit_status
+
+  local pid = spawn_proc(cmd_)
+
+  return setmetatable({cmd         = cmd_,
+                       exit_status = exit_status,
+                       pid         = pid}, exec_mt)
+end
+
+function exec.wait(self)
+  self.exit_status = wait(self.pid)
+  return self
+end
+
+-- pipeline --
+
+local pipeline = {
+  cmds          = {},
+  exit_statuses = {},
+  opts          = {},
+  pids          = {},
+}
+
+local pipeline_mt = {
+  __index = pipeline,
+  __tostring = function(t)
+    local len = #t.cmds
+    local res = {}
+    local ret = table_new(len, 0)
+
+    for i=1,len do
+      local es = t.exit_statuses and t.exit_statuses[i] or '?'
+      local cmd = table.concat(t.cmds[i], ' ')
+      table.insert(ret, string.format('"%s" -> %s', cmd, es))
+    end
+
+    return table.concat(ret, '\n')
+  end
+}
+
 function _M.pipeline()
-  return setmetatable({cmds = {}}, mt)
+  return setmetatable(pipeline, pipeline_mt)
 end
 
-function _M.add(self, x, opt)
-  table.insert(self.cmds, { x, opt })
+function pipeline.add(self, cmd, opt)
+  assert(type(cmd) == "table")
+  if opt then assert(type(opt) == "table") end
+
+  local next_i = #self.cmds + 1
+
+  self.cmds[next_i] = cmd
+  self.opts[next_i] = opt
+
   return self
 end
 
-function _M.exec(self, opt)
-  local cmds_opts     = self.cmds
-  local cmds_opts_len = #cmds_opts
-  local cmds          = table_new(cmds_opts_len, 0)
+function pipeline.exec(self, opt)
+  local cmds_    = self.cmds
+  local cmds_len = #cmds_
 
-  for i=1,cmds_opts_len do
+  for i=1,cmds_len do
     -- TODO: implement options
-    local cmd = cmds_opts[i][1]
-    cmds[i] = glob_cmd(cmd)
+    local cmd = cmds_[i]
+    self.cmds[i] = glob_cmd(cmd)
   end
 
-  self.pids = pipes(cmds)
-
-  if opt and opt.wait then
-    return _M.wait(self)
-  end
+  self.pids = pipes(cmds_)
 
   return self
 end
 
-function _M.wait(self)
+function pipeline.wait(self)
   local pids_len = #self.pids
-  local ret_code = table_new(pids_len, 0)
 
   for i=1,pids_len do
-    local r, err, status = S.waitpid(self.pids[i], "ALL")
-    -- TODO: normalize
-    ret_code[i] = status.status
+    self.exit_statuses[i] = wait(self.pids[i])
   end
-
-  self.ret_code = ret_code
 
   return self
 end
