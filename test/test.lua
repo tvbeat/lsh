@@ -1,8 +1,8 @@
 local sh = require 'lsh'
 
-local status = sh.exec({'echo', '"blabla""'}):wait()
+local res = sh.exec({'echo', '"blabla""'}):wait()
 
-print(status)
+print(res)
 
 local p = sh.pipeline()
 
