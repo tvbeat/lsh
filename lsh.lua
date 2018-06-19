@@ -1,5 +1,5 @@
 local S    = require 'syscall'
-local libc = require 'luash.libc'
+local libc = require 'lsh.libc'
 
 local table_new = require 'table.new'
 local table = table

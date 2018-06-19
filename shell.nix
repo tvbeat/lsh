@@ -5,7 +5,7 @@ let
 in 
 with pkgs;
 stdenv.mkDerivation rec {
-  name = "luash";
+  name = "lsh";
   buildInputs = [
     luajit
     luajitPackages.syscall

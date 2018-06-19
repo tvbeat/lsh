@@ -1,4 +1,4 @@
-local sh = require 'luash'
+local sh = require 'lsh'
 
 local status = sh.exec({'echo', '"blabla""'}):wait()
 
