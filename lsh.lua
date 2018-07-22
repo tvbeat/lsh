@@ -27,6 +27,11 @@ local function child_env(envs)
   end
 end
 
+local function child_workdir(path)
+  -- write checks
+  S.chdir(path)
+end
+
 local function glob_cmd(cmd)
   local cmd_len = #cmd
   local cmd_globbed = table_new(cmd_len, 0)
@@ -53,6 +58,8 @@ local function exec_proc(cmd, in_, out_, err_)
     local c = opt.noglob and cmd or glob_cmd(cmd)
 
     if opt.env then child_env(opt.env) end
+    if opt.workdir then child_workdir(opt.workdir) end
+
     redr_stdfds(in_, out_, err_)
 
     local ret = libc.execvp(c[1], c)
@@ -71,6 +78,8 @@ local function exec_fun(fpck, in_, out_, err_)
     local opt = fpck._opt
 
     if opt.env then child_env(opt.env) end
+    if opt.workdir then child_workdir(opt.workdir) end
+
     redr_stdfds(in_, out_, err_)
 
     fn()

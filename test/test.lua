@@ -27,6 +27,14 @@ local res = sh.exec({'printenv', 'MYENV'}, {env = {MYENV = 'test'}}):wait()
 print(res)
 
 --
+print "\n-- exec simple workdir --"
+--
+
+local res = sh.exec({'cat', '1/cmdline'}, {workdir = '/proc' }):wait()
+print()
+print(res)
+
+--
 print "\n-- pipeline --"
 --
 
