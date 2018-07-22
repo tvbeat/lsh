@@ -21,13 +21,41 @@ local function redr_stdfds(in_, out_, err_)
   end
 end
 
+local function child_env(envs)
+  for env, v in pairs(envs) do
+    S.setenv(env, v, true)
+  end
+end
+
+local function glob_cmd(cmd)
+  local cmd_len = #cmd
+  local cmd_globbed = table_new(cmd_len, 0)
+
+  for i=1,cmd_len do
+    local cmd_part = cmd[i]
+    local res, err = libc.glob(cmd_part)
+
+    if err then
+      table.insert(cmd_globbed, cmd_part)
+    else
+      for y=1,#res do table.insert(cmd_globbed, res[y]) end
+    end
+  end
+
+  return cmd_globbed
+end
+
 local function exec_proc(cmd, in_, out_, err_)
   local pid = S.fork()
 
   if pid == 0 then
+    local opt = cmd._opt
+    local c = opt.noglob and cmd or glob_cmd(cmd)
+
+    if opt.env then child_env(opt.env) end
     redr_stdfds(in_, out_, err_)
 
-    local ret = libc.execvp(cmd[1], cmd)
+    local ret = libc.execvp(c[1], c)
     error("execvp failed with: ", ret)
     os.exit(1)
   end
@@ -35,10 +63,14 @@ local function exec_proc(cmd, in_, out_, err_)
   return pid
 end
 
-local function exec_fun(fn, in_, out_, err_)
+local function exec_fun(fpck, in_, out_, err_)
   local pid = S.fork()
 
   if pid == 0 then
+    local fn = fpck[1]
+    local opt = fpck._opt
+
+    if opt.env then child_env(opt.env) end
     redr_stdfds(in_, out_, err_)
 
     fn()
@@ -85,23 +117,6 @@ local function wait(pid)
   return exit_status
 end
 
-local function glob_cmd(cmd)
-  local cmd_len = #cmd
-  local cmd_globbed = table_new(cmd_len, 0)
-
-  for i=1,cmd_len do
-    local cmd_part = cmd[i]
-    local res, err = libc.glob(cmd_part)
-
-    if err then
-      table.insert(cmd_globbed, cmd_part)
-    else
-      for y=1,#res do table.insert(cmd_globbed, res[y]) end
-    end
-  end
-
-  return cmd_globbed
-end
 
 local _M = {}
 
@@ -111,24 +126,28 @@ local cmd_ = {}
 
 function cmd_.new(cmd, opt)
   if not cmd then return error("missing cmd") end
-  local opt = opt or {}
   local cmd_type = type(cmd)
 
   if cmd_type == "function" then
-    return setmetatable({cmd}, {
+    local fpck = {
+      [1] = cmd,
+      _opt = opt or {},
+    }
+
+    return setmetatable(fpck, {
       __tostring = function(t)
         return tostring(t[1])
       end,
       __call = function(t, in_, out_, err_)
-        local pid = exec_fun(t[1], in_, out_, err_)
+        local pid = exec_fun(t, in_, out_, err_)
         t.pid = pid
         return pid
       end
     })
   elseif cmd_type == "table" then
-    local c = opt.noglob and cmd or glob_cmd(cmd)
+    cmd._opt = opt or {}
 
-    return setmetatable(c, {
+    return setmetatable(cmd, {
       __tostring = function(t)
         return table.concat(t, ' ')
       end,

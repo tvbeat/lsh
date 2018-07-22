@@ -1,20 +1,34 @@
 local sh = require 'lsh'
 
--- exec --
+--
+print "-- exec simple --"
+--
 
 local res = sh.exec({'echo', '"blabla""'}):wait()
 
 print(res)
 
+--
+print( "\n-- exec function --" )
+--
 
-res = sh.exec(function()
+local res = sh.exec(function()
   print("hello")
 end):wait()
 
 print(res)
 
+--
+print "\n-- exec simple env --"
+--
 
--- pipeline --
+local res = sh.exec({'printenv', 'MYENV'}, {env = {MYENV = 'test'}}):wait()
+
+print(res)
+
+--
+print "\n-- pipeline --"
+--
 
 local p = sh.pipeline()
 
