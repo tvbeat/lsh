@@ -4,18 +4,31 @@ local libc = require 'lsh.libc'
 local table_new = require 'table.new'
 local table = table
 
-local function redr_stdfds(in_, out_, err_)
-  if in_ and in_ ~= S.stdin then
+local function redr_stdfds(in_, out_, err_, opt)
+
+  if opt.stdin then
+    local fd = S.open(opt.stdin, 'rdonly', 'RUSR')
+    S.dup2(fd, S.stdin)
+    S.close(fd)
+  elseif in_ and in_ ~= S.stdin then
     S.dup2(in_, S.stdin)
     S.close(in_)
   end
 
-  if out_ and out_ ~= S.stdout then
+  if opt.stdout then
+    local fd = S.open(opt.stdout, 'creat, rdwr', 'RUSR, WUSR')
+    S.dup2(fd, S.stdout)
+    S.close(fd)
+  elseif out_ and out_ ~= S.stdout then
     S.dup2(out_, S.stdout)
     S.close(out_)
   end
 
-  if err_ and err_ ~= S.stderr then
+  if opt.stderr then
+    local fd = S.open(opt.stderr, 'creat, rdwr', 'RUSR, WUSR')
+    S.dup2(fd, S.stderr)
+    S.close(fd)
+  elseif err_ and err_ ~= S.stderr then
     S.dup2(err_, S.stderr)
     S.close(err_)
   end
@@ -60,7 +73,7 @@ local function exec_proc(cmd, in_, out_, err_)
     if opt.env then child_env(opt.env) end
     if opt.workdir then child_workdir(opt.workdir) end
 
-    redr_stdfds(in_, out_, err_)
+    redr_stdfds(in_, out_, err_, opt)
 
     local ret = libc.execvp(c[1], c)
     error("execvp failed with: ", ret)
@@ -80,7 +93,7 @@ local function exec_fun(fpck, in_, out_, err_)
     if opt.env then child_env(opt.env) end
     if opt.workdir then child_workdir(opt.workdir) end
 
-    redr_stdfds(in_, out_, err_)
+    redr_stdfds(in_, out_, err_, opt)
 
     fn()
     os.exit(0)

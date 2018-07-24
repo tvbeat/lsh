@@ -35,6 +35,24 @@ print()
 print(res)
 
 --
+print "\n-- exec redirect stdout --"
+--
+
+local res = sh.exec({'cat', '1/cmdline'}, {workdir = '/proc', stdout = '/tmp/out'}):wait()
+print(res)
+local res = sh.exec({'cat', 'out'}, {workdir = '/tmp'}):wait()
+print()
+print(res)
+
+--
+print "\n-- exec redirect stdin --"
+--
+
+local res = sh.exec({'cat'}, {stdin = '/proc/1/cmdline'}):wait()
+print()
+print(res)
+
+--
 print "\n-- pipeline --"
 --
 
