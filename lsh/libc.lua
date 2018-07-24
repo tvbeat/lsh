@@ -25,7 +25,7 @@ local glob_t = ffi.typeof("glob_t[1]")
 
 -- used for no return value, return true for use of assert
 local function retbool(ret, err)
-  if ret == -1 then return nil, error() end
+  if ret == -1 then return nil, S.errno() end
   return true
 end
 
