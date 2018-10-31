@@ -212,10 +212,7 @@ end
 
 -- pipeline --
 
-local pipeline = {
-  cmds          = {},
-  exit_statuses = {},
-}
+local pipeline = {}
 
 local pipeline_mt = {
   __index = pipeline,
@@ -233,7 +230,9 @@ local pipeline_mt = {
 }
 
 function _M.pipeline()
-  return setmetatable(pipeline, pipeline_mt)
+  return setmetatable({cmds          = {},
+                       exit_statuses = {},
+                      }, pipeline_mt)
 end
 
 function pipeline.add(self, cmd, opt)
