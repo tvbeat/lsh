@@ -35,6 +35,14 @@ print()
 print(res)
 
 --
+print "\n-- exec 10k args --"
+--
+local cmd = {'echo'}
+for i=1,10000 do cmd[i+1] = ("arg%d"):format(i) end
+local res = sh.exec(cmd, {workdir = '/tmp', stdout = '/dev/null'}):wait()
+print(("exit status: %d"):format(res.exit_status))
+
+--
 print "\n-- exec redirect stdout --"
 --
 

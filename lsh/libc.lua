@@ -44,11 +44,16 @@ local glob_ret_codes = setmetatable({
   [4] = "GLOB_NOSYS",
 }, {__index = "UNKNOWN_ERROR"})
 
+local function glob_callback(path, eerrno)
+  io.stderr:write(("glob error: %s %s"):format(path, eerrno))
+end
+local glob_callback_c = ffi.cast("int (*)(const char *, int)", glob_callback)
+
 function _M.glob(str)
 
   local results = ffi.new('glob_t[1]')
   -- TODO: handlers
-  local ret = C.glob(str, 0, function(path, eerrno) print(path, eerrno) end, results)
+  local ret = C.glob(str, 0, glob_callback_c, results)
   if ret ~= 0 then return nil, glob_ret_codes[ret] end
 
   local len = tonumber(results[0].gl_pathc)
