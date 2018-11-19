@@ -65,9 +65,11 @@ local glob_callback_c = ffi.cast("int (*)(const char *, int)", glob_callback)
 function _M.glob(str)
 
   local results = ffi.new('glob_t[1]')
-  -- TODO: handlers
   local ret = C.glob(str, 0, glob_callback_c, results)
-  if ret ~= 0 then return nil, glob_ret_codes[ret] end
+  if ret ~= 0 then
+    C.globfree(results)
+    return nil, glob_ret_codes[ret]
+  end
 
   local len = tonumber(results[0].gl_pathc)
   local res = table_new(len, 0)
