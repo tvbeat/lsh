@@ -4,6 +4,7 @@ local table_new = require 'table.new'
 
 ffi.cdef [[
   int execvp(const char *, const char* []);
+  char *strerror(int errnum);
 
   typedef unsigned long size_t;
 
@@ -20,21 +21,33 @@ ffi.cdef [[
 ]]
 
 local C = ffi.C
-local string_array = ffi.typeof("const char* [?]")
+local string_array_t = ffi.typeof("const char *[?]")
 local glob_t = ffi.typeof("glob_t[1]")
 
--- used for no return value, return true for use of assert
-local function retbool(ret, err)
-  if ret == -1 then return nil, S.errno() end
-  return true
+local function ffi_error()
+  return ffi.string(C.strerror(ffi.errno()))
 end
 
 local _M = {}
 
-function _M.execvp(cmdname, args)
-  local cargs = string_array(#args + 1, args or {})
-  cargs[#args] = nil
-  retbool(C.execvp(cmdname, cargs))
+function _M.execvp(cmdargs)
+  local cmdargs_len = #cmdargs
+  local cargs = string_array_t(cmdargs_len + 1)
+
+  -- normalize args to strings
+  for i=1,cmdargs_len do
+    local arg = tostring(cmdargs[i])
+    if not arg then
+      return nil, "cannot convert arg to string"
+    end
+
+    cargs[i-1] = arg
+  end
+
+  cargs[cmdargs_len] = nil
+
+  local ret = C.execvp(cargs[0], cargs)
+  return ret, ffi_error()
 end
 
 local glob_ret_codes = setmetatable({

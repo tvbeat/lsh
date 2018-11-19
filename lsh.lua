@@ -75,9 +75,8 @@ local function exec_proc(cmd, in_, out_, err_)
 
     redr_stdfds(in_, out_, err_, opt)
 
-    local ret = libc.execvp(c[1], c)
-    error("execvp failed with: ", ret)
-    os.exit(1)
+    local _, err = libc.execvp(c)
+    error("exec: "..err)
   end
 
   return pid
