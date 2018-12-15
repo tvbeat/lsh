@@ -16,7 +16,7 @@ local function redr_stdfds(in_, out_, err_, opt)
   end
 
   if opt.stdout then
-    local fd = S.open(opt.stdout, 'creat, rdwr', 'RUSR, WUSR')
+    local fd = S.open(opt.stdout, 'creat, wronly, trunc', 'RUSR, WUSR')
     S.dup2(fd, S.stdout)
     S.close(fd)
   elseif out_ and out_ ~= S.stdout then
@@ -25,7 +25,7 @@ local function redr_stdfds(in_, out_, err_, opt)
   end
 
   if opt.stderr then
-    local fd = S.open(opt.stderr, 'creat, rdwr', 'RUSR, WUSR')
+    local fd = S.open(opt.stderr, 'creat, wronly, trunc', 'RUSR, WUSR')
     S.dup2(fd, S.stderr)
     S.close(fd)
   elseif err_ and err_ ~= S.stderr then
