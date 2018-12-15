@@ -1,6 +1,6 @@
-local ffi   = require 'ffi'
-local S = require "syscall"
-local table_new = require 'table.new'
+local ffi    = require 'ffi'
+local S      = require "syscall"
+local tablex = require 'lsh.tablex'
 
 ffi.cdef [[
   int execvp(const char *, const char* []);
@@ -30,18 +30,35 @@ end
 
 local _M = {}
 
+local function arg_str(ar)
+  if type(ar) == 'string' then
+    return ar
+  end
+
+  local ar_len = #ar
+  local ret = tablex.new(ar_len, 0)
+
+  for i=1,ar_len do
+    local p = ar[i]
+    local p_type = type(ar)
+
+    if p_type == 'table' then
+      ret[i] = ("%s"):format(arg_str(p))
+    else
+      ret[i] = p
+    end
+  end
+
+  return tablex.concat(ret, ' ')
+end
+
 function _M.execvp(cmdargs)
   local cmdargs_len = #cmdargs
   local cargs = string_array_t(cmdargs_len + 1)
 
   -- normalize args to strings
   for i=1,cmdargs_len do
-    local arg = tostring(cmdargs[i])
-    if not arg then
-      return nil, "cannot convert arg to string"
-    end
-
-    cargs[i-1] = arg
+    cargs[i-1] = arg_str(cmdargs[i])
   end
 
   cargs[cmdargs_len] = nil
@@ -63,6 +80,9 @@ end
 local glob_callback_c = ffi.cast("int (*)(const char *, int)", glob_callback)
 
 function _M.glob(str)
+  if type(str) ~= 'string' then
+    return nil, 'not a string'
+  end
 
   local results = ffi.new('glob_t[1]')
   local ret = C.glob(str, 0, glob_callback_c, results)
@@ -72,7 +92,7 @@ function _M.glob(str)
   end
 
   local len = tonumber(results[0].gl_pathc)
-  local res = table_new(len, 0)
+  local res = tablex.new(len, 0)
   for i=0,len-1 do
     res[i+1] = ffi.string(results[0].gl_pathv[i])
   end
