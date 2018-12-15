@@ -1,18 +1,18 @@
-let
-  nixpkgs = ./nixpkgs;
-  overlay = ./tvb-nixoverlay;
-  pkgs = import overlay { inherit nixpkgs; };
-in 
+{ pkgs ? import ./pkgs.nix
+}:
+
 with pkgs;
+with import ./common.nix { inherit pkgs; };
+
 stdenv.mkDerivation rec {
   name = "lsh";
-  buildInputs = [
-    luajit
-    luajitPackages.syscall
-  ];
+
+  inherit buildInputs;
+
+  enableParallelBuilding = true;
 
   shellHook = ''
-    function test() {
+    function ltest() {
       luajit test/test.lua
     }
     
@@ -22,7 +22,6 @@ stdenv.mkDerivation rec {
 
     # LuaJIT
     LUA_PATH="$LUA_PATH;$prefix/?.lua"
-    #LUA_CPATH="$LUA_CPATH;$prefix/lib/lua/5.1/?.so"
 
   '';
 }
