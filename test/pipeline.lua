@@ -1,7 +1,7 @@
 local sh = require 'lsh'
 
 --
-print "\n-- pipeline --"
+print "-- pipeline --"
 --
 
 local p = sh.pipeline()

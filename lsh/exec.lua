@@ -1,7 +1,8 @@
 -- exec structure
-local S      = require 'syscall'
+local S = require 'syscall'
 
 local cmd    = require 'lsh.cmd'
+local fio    = require 'lsh.fio'
 local libc   = require 'lsh.libc'
 local tablex = require 'lsh.tablex'
 
@@ -11,11 +12,18 @@ local function child_fds(cmd_opt)
   local stderr = cmd_opt.stderr
 
   if stdin then
-    if type(stdin) == "string" then
-      --TODO: check open
-      local fd = S.open(stdin, 'rdonly', 'RUSR')
-      S.dup2(fd, S.stdin)
-      S.close(fd)
+    local stdin_type = type(stdin)
+    if stdin_type == 'string' then
+      local fh, err = fio.open(stdin, 'rdonly', 'RUSR')
+      if err then
+        io.stderr:write(err..'\n')
+        os.exit(1)
+      end
+      S.dup2(fh:getfd(), S.stdin)
+      fh:close()
+    elseif stdin_type == 'table' then -- fh/memfd
+      S.dup2(stdin:getfd(), S.stdin)
+      stdin:close()
     elseif stdin ~= S.stdin then
       S.dup2(stdin, S.stdin)
       S.close(stdin)
@@ -23,10 +31,18 @@ local function child_fds(cmd_opt)
   end
 
   if stdout then
-    if type(stdout) == "string" then
-      local fd = S.open(stdout, 'creat, wronly, trunc', 'RUSR, WUSR')
-      S.dup2(fd, S.stdout)
-      S.close(fd)
+    local stdout_type = type(stdout)
+    if stdout_type == 'string' then
+      local fh, err = fio.open(stdout, {'creat', 'wronly', 'trunc'}, {'RUSR', 'WUSR'})
+      if err then
+        io.stderr:write(err..'\n')
+        os.exit(1)
+      end
+      S.dup2(fh:getfd(), S.stdout)
+      fh:close()
+    elseif stdout_type == 'table' then -- fh/memfd
+      S.dup2(stdout:getfd(), S.stdout)
+      stdout:close()
     elseif stdout ~= S.stdout then
       S.dup2(stdout, S.stdout)
       if stdout ~= S.stderr then -- don't close stderr
@@ -36,10 +52,18 @@ local function child_fds(cmd_opt)
   end
 
   if stderr then
-    if type(stderr) == "string" then
-      local fd = S.open(stderr, 'creat, wronly, trunc', 'RUSR, WUSR')
-      S.dup2(fd, S.stderr)
-      S.close(fd)
+    local stderr_type = type(stderr)
+    if stderr_type == 'string' then
+      local fh, err = fio.open(stderr, {'creat', 'wronly', 'trunc'}, {'RUSR', 'WUSR'})
+      if err then
+        io.stderr:write(err..'\n')
+        os.exit(1)
+      end
+      S.dup2(fh:getfd(), S.stderr)
+      fh:close()
+    elseif stderr_type == 'table' then -- fh/memfd
+      S.dup2(stderr:getfd(), S.stderr)
+      stderr:close()
     elseif stderr ~= S.stderr then
       S.dup2(stderr, S.stderr)
       if stderr ~= S.stdout then -- don't close stdout
@@ -82,7 +106,7 @@ local function exec_cmd(cmd)
   return pid
 end
 
--- TODO: naive implementation
+-- TODO: naive/buggy implementation
 local function exec_fun(cmd)
   local pid = S.fork()
 
@@ -104,6 +128,29 @@ local function exec_fun(cmd)
   return pid
 end
 
+local function exec_call(exec)
+  local pid
+  local cmd_ = exec.cmd
+
+  local _, etype = cmd_:type()
+  if etype == 'table' then
+    pid = exec_cmd(cmd_)
+  else
+    pid = exec_fun(cmd_)
+  end
+  exec.pid = pid
+
+  return exec
+end
+
+-- return stdfd (in, out, err) if fh/memfd type
+local function stdfd(exec, name)
+  local stdfd = exec.cmd.opt[name]
+  if type(stdfd) ~= 'table' then return nil end
+
+  return stdfd
+end
+
 -- exec --
 --
 -- {
@@ -120,18 +167,7 @@ local exec_mt = {
       return string.format('"%s" -> %s', t.cmd, es)
     end,
   __call = function(t)
-      local pid
-      local cmd_ = t.cmd
-
-      local _, etype = cmd_:type()
-      if etype == 'table' then
-        pid = exec_cmd(cmd_)
-      else
-        pid = exec_fun(cmd_)
-      end
-      t.pid = pid
-
-      return t
+      return exec_call(t)
     end,
 }
 
@@ -237,6 +273,18 @@ function _M.set_opt(self, o)
   self.cmd:set_opt(o)
 
   return self
+end
+
+function _M.stdin(self)
+  return stdfd(self, 'stdin')
+end
+
+function _M.stdout(self)
+  return stdfd(self, 'stdout')
+end
+
+function _M.stderr(self)
+  return stdfd(self, 'stderr')
 end
 
 local mt = {
