@@ -1,5 +1,6 @@
-local ffi    = require 'ffi'
-local S      = require "syscall"
+local ffi = require 'ffi'
+local S   = require 'syscall'
+
 local tablex = require 'lsh.tablex'
 
 ffi.cdef [[

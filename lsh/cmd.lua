@@ -3,8 +3,9 @@
 -- Create and manupulate command and its options
 --
 
-local ffi    = require 'ffi'
-local S      = require 'syscall'
+local ffi = require 'ffi'
+local S   = require 'syscall'
+
 local libc   = require 'lsh.libc'
 local tablex = require 'lsh.tablex'
 
