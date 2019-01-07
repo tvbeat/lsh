@@ -249,13 +249,13 @@ function _M.clone(self, o)
   }, cmd_mt)
 end
 
--- return true if input is cmd type and
+-- return "cmd" if input is cmd type and
 -- type of command (table/function)
-function _M.type(cmd)
-  if type(cmd) ~= 'table' then return false end
-  local is_cmd = getmetatable(cmd) == cmd_mt
+function _M.type(self)
+  if type(self) ~= 'table' then return false end
+  local is_cmd = getmetatable(self) == cmd_mt
   if is_cmd then
-    return is_cmd, type(cmd.cmd)
+    return 'cmd', type(self.cmd)
   end
 
   return false
@@ -263,9 +263,11 @@ end
 
 function _M.set_opt(self, o)
   if type(o) ~= 'table' then return nil end
+  local opt, err = opt_norm(o)
+  if err then return nil, err end
 
   -- TODO: table of valid options
-  for k, v in pairs(o) do
+  for k, v in pairs(opt) do
     self.opt[k] = v
   end
 

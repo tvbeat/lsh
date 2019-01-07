@@ -32,21 +32,25 @@ local fh_mt = {
   end,
 }
 
-function _M.new(fh)
+function _M.new(fd)
   -- TODO: proper check, convert lua file handle
-  assert(type(fh) == 'cdata', 'input must be ljsyscall fd')
+  assert(type(fd) == 'cdata', 'input must be ljsyscall fd')
 
-  return setmetatable({fh = fh}, fh_mt)
+  return setmetatable({fd = fd}, fh_mt)
 end
 
--- return true if input is fh type
-function _M.type(fh)
-  if type(fh) ~= 'table' then return false end
-  return getmetatable(fh) == fh_mt
+-- return 'fh' if input is fh type
+function _M.type(self)
+  if type(self) ~= 'table' then return false end
+  if getmetatable(self) == fh_mt then
+    return 'fh'
+  end
+
+  return false
 end
 
 function _M.close(self)
-  local ok, err = self.fh:close()
+  local ok, err = self.fd:close()
   if err then
     return nil, tostring(err)
   end
@@ -66,7 +70,7 @@ function _M.write(self, buf, len)
     len = #buf
   end
 
-  local res, err = self.fh:pwrite(buf, len, offset)
+  local res, err = self.fd:pwrite(buf, len, offset)
   if err then
     return nil, tostring(err)
   end
@@ -105,7 +109,7 @@ function _M.read(self, buf, size)
     end
   end
 
-  local res, err = self.fh:pread(tmpbuf or buf, size, offset)
+  local res, err = self.fd:pread(tmpbuf or buf, size, offset)
   if err then
     return nil, tostring(err)
   end
@@ -122,16 +126,20 @@ end
 -- TODO
 function _M.seek(self, position)
   assert(type(position) == 'number')
-  --local cur = self.fh:tell()
+  --local cur = self.fd:tell()
   self.offset = offset_t(position)
 
   return tonumber(self.offset)
 end
 
+function _M.getfd(self)
+  return self.fd:getfd()
+end
+
 local mt = {
   __index = _M,
-  __call = function(t, fh)
-    return _M.new(fh)
+  __call = function(t, fd)
+    return _M.new(fd)
   end,
 }
 

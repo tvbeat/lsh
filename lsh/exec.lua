@@ -143,11 +143,15 @@ function _M.new(c, o)
     assert(type(o) == 'table', 'second arg must be table')
   end
 
-  local cmd_
-  if cmd.type(c) then -- first argument cmd type
+  local cmd_, err
+  if c_type == 'table' and c.type and c:type() == 'cmd' then
     cmd_ = c -- just point
-  else
-    cmd_ = cmd(c, o)
+  else -- command table/function
+    cmd_, err = cmd(c, o)
+  end
+
+  if err then
+    return nil, err
   end
 
   return setmetatable({cmd = cmd_}, exec_mt)
@@ -161,10 +165,14 @@ function _M.clone(self, o)
   return _M.new(cmd_)
 end
 
--- return true if input is exec type
-function _M.type(exec)
-  if type(exec) ~= 'table' then return false end
-  return getmetatable(exec) == exec_mt
+-- return "exec" if input is exec type
+function _M.type(self)
+  if type(self) ~= 'table' then return false end
+  if getmetatable(self) == exec_mt then
+    return 'exec'
+  end
+
+  return false
 end
 
 function _M.wait(self)
@@ -234,7 +242,9 @@ end
 local mt = {
   __index = _M,
   __call = function(_, c, o)
-    return _M.new(c, o)()
+    local res, err = _M.new(c, o)
+    if err then return nil, err end
+    return res()
   end,
 }
 

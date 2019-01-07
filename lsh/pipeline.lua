@@ -87,7 +87,7 @@ function _M.add(self, c, o)
   end
 
   local exec_
-  if exec.type(c) then -- exec type
+  if c_type == 'table' and c.type and c:type() == 'exec' then
     exec_ = c:clone(o)
   else -- cmd type or command table/function
     exec_ = exec.new(c, o)
