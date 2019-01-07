@@ -1,7 +1,8 @@
 -- exec structure
-local S      = require 'syscall'
+local S = require 'syscall'
 
 local cmd    = require 'lsh.cmd'
+local fio    = require 'lsh.fio'
 local libc   = require 'lsh.libc'
 local tablex = require 'lsh.tablex'
 
@@ -11,11 +12,14 @@ local function child_fds(cmd_opt)
   local stderr = cmd_opt.stderr
 
   if stdin then
-    if type(stdin) == "string" then
-      --TODO: check open
-      local fd = S.open(stdin, 'rdonly', 'RUSR')
-      S.dup2(fd, S.stdin)
-      S.close(fd)
+    local stdin_type = type(stdin)
+    if stdin_type == 'string' then
+      local fh = fio.open(stdin, 'rdonly', 'RUSR')
+      S.dup2(fh:getfd(), S.stdin)
+      fh:close()
+    elseif stdin_type == 'table' then -- fh/memfd
+      S.dup2(stdin:getfd(), S.stdin)
+      stdin:close()
     elseif stdin ~= S.stdin then
       S.dup2(stdin, S.stdin)
       S.close(stdin)
@@ -23,10 +27,14 @@ local function child_fds(cmd_opt)
   end
 
   if stdout then
-    if type(stdout) == "string" then
-      local fd = S.open(stdout, 'creat, wronly, trunc', 'RUSR, WUSR')
-      S.dup2(fd, S.stdout)
-      S.close(fd)
+    local stdout_type = type(stdout)
+    if stdout_type == 'string' then
+      local fh = fio.open(stdout, {'creat', 'wronly', 'trunc'}, {'RUSR', 'WUSR'})
+      S.dup2(fh:getfd(), S.stdout)
+      fh:close()
+    elseif stdout_type == 'table' then -- fh/memfd
+      S.dup2(stdout:getfd(), S.stdout)
+      stdout:close()
     elseif stdout ~= S.stdout then
       S.dup2(stdout, S.stdout)
       if stdout ~= S.stderr then -- don't close stderr
@@ -36,10 +44,14 @@ local function child_fds(cmd_opt)
   end
 
   if stderr then
-    if type(stderr) == "string" then
-      local fd = S.open(stderr, 'creat, wronly, trunc', 'RUSR, WUSR')
-      S.dup2(fd, S.stderr)
-      S.close(fd)
+    local stderr_type = type(stderr)
+    if stderr_type == 'string' then
+      local fh = fio.open(stderr, {'creat', 'wronly', 'trunc'}, {'RUSR', 'WUSR'})
+      S.dup2(fh:getfd(), S.stderr)
+      fh:close()
+    elseif stderr_type == 'table' then -- fh/memfd
+      S.dup2(stderr:getfd(), S.stderr)
+      stderr:close()
     elseif stderr ~= S.stderr then
       S.dup2(stderr, S.stderr)
       if stderr ~= S.stdout then -- don't close stdout

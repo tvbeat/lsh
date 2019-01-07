@@ -161,6 +161,14 @@ local function opt_norm(o)
       if val_type == 'string' then -- path to file
         -- TODO: check if string is valid path
         opt[fd_name] = val
+      elseif val_type == 'table' then -- fh/memfd
+        local val_obj_type = val.type and val:type()
+        if not val_obj_type == 'fh' or not val_obj_type == 'memfd' then
+          return nil, ("%s opt is table, but not memfd or fh"):format(fd_name)
+        end
+
+        -- TODO: check fh/memfd permissions
+        opt[fd_name] = val
       elseif val_type == 'userdata' then -- lua file handle
         -- allow only standard fds (0, 1, 2)
         local fd = tonumber(C.fileno(val))

@@ -16,3 +16,16 @@ do
 
   print(memfd)
 end
+
+print('-- memfd input --')
+
+do
+  local buf = 'hello'
+  local out = sh.memfd()
+  local res, err = sh.exec.new({'cat'}, {stdin = sh.memfd(buf), stdout = out})
+  res():wait()
+
+  print(out)
+
+end
+

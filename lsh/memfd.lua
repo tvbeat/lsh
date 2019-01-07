@@ -15,8 +15,7 @@ local memfd_mt = {
 
 function _M.new(buf, len)
   -- No need to worry about closing fd, it has close method assigned to __gc
-  -- in ffi metatable:
-  -- https://github.com/justincormack/ljsyscall/blob/master/syscall/methods.lua#L152
+  -- in ffi metatable (ljsyscall syscall/methods.lua#L152)
   local fd, err = S.memfd_create('', 'cloexec') -- TODO: sealing
   if err then
     return nil, tostring(err)
@@ -31,10 +30,14 @@ function _M.new(buf, len)
   return memfd
 end
 
--- return true if input is memfd type
-function _M.type(memfd)
-  if type(memfd) ~= 'table' then return false end
-  return getmetatable(memfd) == memfd_mt
+-- return 'memfd' if input is memfd type
+function _M.type(self)
+  if type(self) ~= 'table' then return false end
+  if getmetatable(self) == memfd_mt then
+    return 'memfd'
+  end
+
+  return false
 end
 
 function _M.close(self)
@@ -51,6 +54,10 @@ end
 
 function _M.seek(self, position)
   return self.fh:seek(position)
+end
+
+function _M.getfd(self)
+  return self.fh:getfd()
 end
 
 local mt = {
