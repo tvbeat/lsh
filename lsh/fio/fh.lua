@@ -6,7 +6,7 @@ local S   = require 'syscall'
 local tablex = require 'lsh.tablex'
 
 local buf_t = ffi.typeof('char[?]')
-local offset_t = ffi.typeof('uint64_t')
+local offset_t = ffi.typeof('uint64_t') -- use size_t ?
 
 local function fh_str(fh)
   -- TODO:
@@ -136,10 +136,8 @@ local nl = string.byte('\n')
 local cr = string.byte('\r')
 
 function _M.lines(self)
-  --print(self.fd:getfd())
-  local st = S.fstat(self.fd)
+  local st = self.fd:stat()
   local size = st.size
-  print("size:",size)
 
   local addr = S.mmap(0, size, 'read', 'shared', self.fd, 0)
   ffi.gc(addr, function(addr)
@@ -147,12 +145,13 @@ function _M.lines(self)
   end)
 
   local map = ffi.cast('const char*', addr)
+  local offset = offset_t(0)
 
-  local offset = 0
-
-  local function lines_()
+  local lines_ = function()
     local ret
-    local count = size - offset
+    local count = tonumber(size - offset)
+    -- improvement: potential optimization can be to move
+    -- pointer arithmetic to plain C
     for i=1,count do
       local c = (map+offset)[0] -- dereference
       offset = offset + 1
@@ -164,14 +163,14 @@ function _M.lines(self)
         ret = ffi.string(map+(offset-i), i-1)
 
         local c_next = (map+offset)[0]
-        if c_next == nl then -- windows
+        if c_next == nl then -- windows \r\n
           offset = offset + 1
         end
 
         break
       end
       
-      if i == count then
+      if i == count then -- end of file
         ret = ffi.string(map+(offset-i), i)
         break
       end
