@@ -132,6 +132,60 @@ function _M.seek(self, position)
   return tonumber(self.offset)
 end
 
+local nl = string.byte('\n')
+local cr = string.byte('\r')
+
+function _M.lines(self)
+  --print(self.fd:getfd())
+  local st = S.fstat(self.fd)
+  local size = st.size
+  print("size:",size)
+
+  local addr = S.mmap(0, size, 'read', 'shared', self.fd, 0)
+  ffi.gc(addr, function(addr)
+    S.munmap(addr, size)
+  end)
+
+  local map = ffi.cast('const char*', addr)
+
+  local offset = 0
+
+  local function lines_()
+    local ret
+    local count = size - offset
+    for i=1,count do
+      local c = (map+offset)[0] -- dereference
+      offset = offset + 1
+
+      if c == nl then
+        ret = ffi.string(map+(offset-i), i-1)
+        break
+      elseif c == cr then
+        ret = ffi.string(map+(offset-i), i-1)
+
+        local c_next = (map+offset)[0]
+        if c_next == nl then -- windows
+          offset = offset + 1
+        end
+
+        break
+      end
+      
+      if i == count then
+        ret = ffi.string(map+(offset-i), i)
+        break
+      end
+    end
+
+    return ret
+  end
+
+  return function()
+    return lines_()
+  end
+
+end
+
 function _M.getfd(self)
   return self.fd:getfd()
 end
