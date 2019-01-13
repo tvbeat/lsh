@@ -56,6 +56,10 @@ function _M.seek(self, position)
   return self.fh:seek(position)
 end
 
+function _M.lines(self)
+  return self.fh:lines()
+end
+
 function _M.getfd(self)
   return self.fh:getfd()
 end

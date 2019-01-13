@@ -19,6 +19,7 @@ do
   local res = memfd:read()
   assert(res == 'foobar789')
 
+
 end
 
 print('-- memfd exec io --')
@@ -32,4 +33,30 @@ do
 
   assert(tostring(res:stdout()) == buf)
 
+end
+
+print('-- memfd read lines --')
+
+do
+  local buf = '123\n456\r\n\r\n\n567\nabc\n\na\rab\rfoo'
+  local out = {
+    '123',
+    '456',
+    '',
+    '',
+    '567',
+    'abc',
+    '',
+    'a',
+    'ab',
+    'foo'
+  }
+
+  local memfd = sh.memfd(buf)
+
+  local i = 1
+  for line in memfd:lines() do
+    assert(line == out[i])
+    i = i + 1
+  end
 end

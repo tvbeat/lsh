@@ -132,6 +132,78 @@ function _M.seek(self, position)
   return tonumber(self.offset)
 end
 
+local nl = string.byte('\n')
+local cr = string.byte('\r')
+
+-- read line by line, similar to io.lines
+function _M.lines(self)
+  local st = self.fd:stat()
+  local size = st.size
+
+  -- noting to mmap
+  if size <= 0 then
+    return function() end
+  end
+
+  -- In case of memfd mmap will only reserve new region of
+  -- virtual memory, it does not copy the memory
+  local addr, err = S.mmap(0, size, 'read', 'shared', self.fd, 0)
+  if not addr then
+    error('mmap failed: '..tostring(err))
+  end
+  ffi.gc(addr, function(addr)
+    S.munmap(addr, size)
+  end)
+
+  local buf = ffi.cast('const char*', addr)
+  local buf_end = buf + size
+
+  return function()
+    local count = 0
+    while buf <= buf_end do
+      local c = buf[0] -- dereference
+
+      if c == nl then -- match UNIX \n
+        local ret = ffi.string(buf-count, count)
+
+        buf = buf + 1
+        return ret
+      end
+
+      if c == cr then -- match Mac OS \r
+        local ret = ffi.string(buf-count, count)
+
+        if buf < buf_end then
+          local c_next = (buf+1)[0]
+          if c_next == nl then -- match Windows \r\n
+            buf = buf + 2
+            return ret
+          end
+        end
+
+        buf = buf + 1
+        return ret
+      end
+
+      if buf == buf_end then -- end of file
+        local ret
+
+        if count > 0 then
+          ret = ffi.string(buf-count, count) -- return leftovers
+        end
+
+        buf = buf + 1
+        return ret
+      end
+
+      count = count + 1
+      buf = buf + 1
+    end
+
+    return nil
+  end
+end
+
 function _M.getfd(self)
   return self.fd:getfd()
 end
