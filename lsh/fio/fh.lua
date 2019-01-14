@@ -135,6 +135,8 @@ end
 local nl = string.byte('\n')
 local cr = string.byte('\r')
 
+-- improvement: potential optimization can be to move
+-- pointer arithmetic to plain C
 function _M.lines(self)
   local st = self.fd:stat()
   local size = st.size
@@ -143,40 +145,58 @@ function _M.lines(self)
   ffi.gc(addr, function(addr)
     S.munmap(addr, size)
   end)
-
-  local map = ffi.cast('const char*', addr)
-  local offset = offset_t(0)
+  local buf = ffi.cast('const char*', addr)
+  local buf_end = buf + size
 
   local lines_ = function()
-    local ret
-    local count = tonumber(size - offset)
-    -- improvement: potential optimization can be to move
-    -- pointer arithmetic to plain C
-    for i=1,count do
-      local c = (map+offset)[0] -- dereference
-      offset = offset + 1
+    local count = 0
+    while buf <= buf_end do
+      local c = buf[0] -- dereference
 
+      -- match newline
       if c == nl then
-        ret = ffi.string(map+(offset-i), i-1)
-        break
-      elseif c == cr then
-        ret = ffi.string(map+(offset-i), i-1)
+        local ret
 
-        local c_next = (map+offset)[0]
-        if c_next == nl then -- windows \r\n
-          offset = offset + 1
+        if count > 0 then
+          ret = ffi.string(buf-count, count)
+        else
+          ret = ''
         end
 
-        break
+        buf = buf + 1
+
+        return ret
       end
-      
-      if i == count then -- end of file
-        ret = ffi.string(map+(offset-i), i)
-        break
+
+      -- match carriage return
+      if c == cr then
+        if buf < buf_end then -- windows \r\n
+          local c_next = (buf+1)[0]
+          if c_next == nl then
+            local ret = ffi.string(buf-count, count)
+            buf = buf + 2
+            return ret
+          end
+        end
       end
+
+      if buf == buf_end then -- end of file
+        local ret
+
+        if count > 0 then -- return leftovers
+          ret = ffi.string(buf-count, count)
+        end
+
+        buf = buf + 1
+
+        return ret
+      end
+
+      count = count + 1
+      buf = buf + 1
     end
 
-    return ret
+    return nil
   end
 
   return function()

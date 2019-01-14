@@ -35,24 +35,25 @@ do
 
 end
 
-print('-- memfd lines --')
+print('-- memfd read lines --')
 
 do
-
-  local buf = '123\n456\n567\nabc'
+  local buf = '123\n456\r\n\n567\nabc\n\na\nab\rz'
+  local out = {
+    '123',
+    '456',
+    '',
+    '567',
+    'abc',
+    '',
+    'a',
+    'ab\rz',
+  }
   local memfd = sh.memfd(buf)
 
-  local count = 1
+  local i = 1
   for line in memfd:lines() do
-    print(count)
-    print(line, #line)
-    count = count + 1
+    assert(line == out[i])
+    i = i + 1
   end
-
-  local buf = '123\r\n'
-  local memfd = sh.memfd(buf)
-  for line in memfd:lines() do
-    print(line, #line)
-  end
-
 end
