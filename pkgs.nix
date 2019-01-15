@@ -6,8 +6,8 @@ let
   mirror = "https://tvbeat-nix-channels.s3-eu-west-1.amazonaws.com";
 
   overlay = fetchTarball {
-    url = "${mirror}/tvb-nixoverlay/master/1f71839/nixexprs.tar.xz";
-    sha256 = "0qnpq4mq5xwgx66yd0ijd9p69hhcac8ab997mkk9mikd3abx51f1";
+    url = "${mirror}/tvb-nixoverlay/master/529487a/nixexprs.tar.xz";
+    sha256 = "0fhfb16gx5b6hfsf6wgqw5wi7cily9hac5ysipy2dkc38byzgf14";
   };
 
   nixpkgs = <nixpkgs>;
