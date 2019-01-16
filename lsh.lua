@@ -11,12 +11,12 @@ _M.memfd    = require 'lsh.memfd'
 _M.pipeline = require 'lsh.pipeline'
 _M.tablex   = tablex
 
-local fio = 'lsh.fio'
+local fio = require 'lsh.fio'
 -- fio methods
 _M.open = fio.open
 _M.path = fio.path
 
-local time = 'lsh.time'
+local time = require 'lsh.time'
 -- time methods
 _M.sleep = time.sleep
 
