@@ -132,31 +132,38 @@ function _M.seek(self, position)
   return tonumber(self.offset)
 end
 
-local nl = string.byte('\n')
-local cr = string.byte('\r')
-
 -- read line by line, similar to io.lines
+--
+-- TODO:
+--  * implementation is portable and simple to understand
+--    but very slow, options are to move pointer arithmetic
+--    to plain C or ditch mmap completely
+--  * in !GC64 mode we should find address for mmap outside
+--    of lower 4G to not mess with LuaJIT allocations
+--  * optional delimiter flag
 function _M.lines(self)
+  local nl = string.byte('\n')
+  local cr = string.byte('\r')
+
   local st = self.fd:stat()
   local size = st.size
-
-  -- noting to mmap
+  -- nothing to mmap
   if size <= 0 then
     return function() end
   end
 
   -- In case of memfd mmap will only reserve new region of
   -- virtual memory, it does not copy the memory
-  local addr, err = S.mmap(0, size, 'read', 'shared', self.fd, 0)
-  if not addr then
+  local buf, err = S.mmap(0, size, 'read', 'shared', self.fd, 0)
+  if not buf then
     error('mmap failed: '..tostring(err))
   end
-  ffi.gc(addr, function(addr)
-    S.munmap(addr, size)
-  end)
 
-  local buf = ffi.cast('const char*', addr)
-  local buf_end = buf + size
+  buf = ffi.cast('const char*', buf)
+  local buf_start, buf_end = buf, buf + size
+  ffi.gc(buf, function()
+    S.munmap(buf_start, size)
+  end)
 
   return function()
     local count = 0
