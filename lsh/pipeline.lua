@@ -22,8 +22,8 @@ local function exec_pipeline(execs)
         stdout = w
       })()
 
-    if _in then
-      S.close(_in)
+    if in_ then
+      S.close(in_)
     end
 
     if i ~= execs_len then
