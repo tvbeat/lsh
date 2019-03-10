@@ -64,7 +64,7 @@ function _M.abspath(path)
   if string.sub(path, 1, 1) == '/' then
     joined_path = path
   else
-    joined_path = _M.pathjoin(S.cwd(), path)
+    joined_path = _M.join(S.getcwd(), path)
   end
 
   for sp in string.gmatch(joined_path, '[^/]+') do
