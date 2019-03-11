@@ -129,7 +129,7 @@ local function opt_norm(o)
     if type(env) ~= 'table' then
       return nil, 'env opt must be table'
     end
-    opt.env = tablex.deepcopy(env)
+    opt.env = tablex.clone(env)
   end
 
   local workdir = o.workdir
@@ -252,8 +252,8 @@ function _M.clone(self, o)
   assert(self)
 
   return setmetatable({
-    cmd = tablex.deepcopy(self.cmd), -- it will return input if not table
-    opt = self.opt and tablex.deepcopy(self.opt) or {},
+    cmd = tablex.clone(self.cmd, true), -- it will return input if not table
+    opt = self.opt and tablex.clone(self.opt, true) or {},
   }, cmd_mt)
 end
 
