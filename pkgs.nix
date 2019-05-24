@@ -10,7 +10,10 @@ let
     sha256 = "0hmynl75li2x880hkhidx80drj2fy8dbl45vl7rnwfdy1sgz0lhd";
   };
 
-  nixpkgs = <nixpkgs>;
+  nixpkgs = fetchTarball {
+    url = "${mirror}/nixpkgs/c2c4cc6/nixexprs.tar.xz";
+    sha256 = "179rwkzpgmmiw3vdrd033x5l5xyp9gm2zd7k6h580whns85lgkra";
+  };
 
   pkgs = import overlay { inherit nixpkgs; };
 
