@@ -1,0 +1,8 @@
+image: nixos/nix:2.2.1
+
+before_script:
+  - echo -e 'silent\nshow-error\nretry=2' | tee ~/.curlrc > /dev/null
+
+test:
+  script:
+    - nix-shell --run ltest
