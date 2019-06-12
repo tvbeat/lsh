@@ -88,6 +88,9 @@ local function exec_cmd(cmd)
   local pid = S.fork()
 
   if pid == 0 then
+    -- exec will happen soon, no need for GC
+    collectgarbage("stop")
+
     local opt = cmd.opt
     local c = opt.noglob and cmd.cmd or cmd:glob()
 
@@ -95,6 +98,20 @@ local function exec_cmd(cmd)
     if opt.workdir then child_workdir(opt.workdir) end
 
     child_fds(opt)
+
+    --
+    local r, err = S.getrlimit("nofile")
+    if err then
+      error("unable to get rlimit")
+    end
+
+    -- manually try to close all fd except in, out, err
+    -- https://github.com/openssh/openssh-portable/blob/master/openbsd-compat/bsd-closefrom.c
+    for i=3,tonumber(r.rlim_max) do
+      local res = S.close(i)
+      if res then print('fd', i, res) end
+--      else break end
+    end
 
     -- if the parent dies, the children die
     S.prctl("set_pdeathsig", "kill")

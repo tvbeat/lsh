@@ -7,14 +7,18 @@ local tablex = require 'lsh.tablex'
 
 local buf_t = ffi.typeof('char[?]')
 local offset_t = ffi.typeof('uint64_t')
+local pagesize = S.getpagesize()
 
 local function fh_str(fh)
   -- TODO:
   -- - restore seek position
   -- - check for max lua string size to prevent out of memory
   fh:seek(0)
-  local res = {}
 
+  local st = fh.fd:stat()
+  local arr_len = math.floor(st.size / pagesize) + 1
+
+  local res = tablex.new(arr_len, 0)
   while true do
     local part = fh:read()
     if part == '' then break end
@@ -80,8 +84,7 @@ function _M.write(self, buf, len)
   return res >= 0
 end
 
-local rsize = 4096 -- size of default read buffer
-local rbuf = buf_t(rsize)
+local rbuf = buf_t(pagesize)
 
 -- read(size) -> str
 -- read(buf, size) -> len
@@ -100,12 +103,12 @@ function _M.read(self, buf, size)
     tmpbuf = rbuf -- try to reuse allocated buffer
     if size then
       assert(type(size) == 'number')
-      if size > rsize then
+      if size > pagesize then
         -- if provided size is bigger than default allocate new buf
         tmpbuf = buf_t(size)
       end
     else
-      size = rsize
+      size = pagesize
     end
   end
 
