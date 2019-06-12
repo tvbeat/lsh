@@ -1,6 +1,1 @@
-require 'test.cmd'
 require 'test.exec'
-require 'test.memfd'
-require 'test.pipeline'
-require 'test.libc'
-require 'test.stringx'

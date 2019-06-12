@@ -8,10 +8,16 @@ local o = {workdir = '/tmp', stdout = '/dev/null'}
 print "-- exec simple --"
 --
 
-local res = sh.exec({'echo', '"blabla""', 1}):wait()
+local fd = io.open('/etc/resolv.conf', 'r')
+local fd2 = io.open('/etc/resolv.conf', 'r')
+local fd3 = io.open('/etc/resolv.conf', 'r')
+local fd4 = io.open('/etc/resolv.conf', 'r')
+local fd5 = io.open('/etc/resolv.conf', 'r')
 
-print(res)
+local res1 = sh.exec({'echo', '"blabla""', 1}):wait()
 
+
+res1:wait()
 --
 print "-- exec simple status --"
 --
@@ -23,6 +29,10 @@ do
   assert(status.alive)
   assert(res:wait())
 end
+
+fd2:close()
+fd4:close()
+
 
 --
 print "-- exec status wait --"
@@ -46,9 +56,9 @@ end
 print( "\n-- exec function --" )
 --
 
-local res = sh.exec(function()
-  print("hello")
-end):wait()
+--local res = sh.exec(function()
+--  print("hello")
+--end):wait()
 
 print(res)
 
