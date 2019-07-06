@@ -2,7 +2,7 @@
 
 local type, pairs = type, pairs
 local getmetatable, setmetatable = getmetatable, setmetatable
-local _M = table
+local _M = require 'table'
 
 -- based on tarantool (2.1): src/lua/table.lua
 local function table_deepcopy(orig, cyclic)
@@ -15,8 +15,8 @@ local function table_deepcopy(orig, cyclic)
     else
       cyclic[orig] = copy
       for orig_key, orig_value in pairs(orig) do
-        local key = table_deepcopy_internal(orig_key, cyclic)
-        copy[key] = table_deepcopy_internal(orig_value, cyclic)
+        local key = table_deepcopy(orig_key, cyclic)
+        copy[key] = table_deepcopy(orig_value, cyclic)
       end
       local mt = getmetatable(orig)
       if mt ~= nil then setmetatable(copy, mt) end
@@ -45,7 +45,7 @@ local ok, table_clone = pcall(require, "table.clone")
 if not ok or type(table_clone) ~= "function" then
   table_clone = function(tab, deep)
     if deep then
-      return table_deepcopy_internal(tab, nil)
+      return table_deepcopy(tab)
     end
 
     return table_shallowcopy(tab)
@@ -57,8 +57,15 @@ if not ok or type(table_new) ~= "function" then
   table_new = function(narr, nrec) return {} end
 end
 
+local ok, table_pack = pcall(require, "table.pack")
+if not ok or type(table_pack) ~= 'function' then
+  table_pack = function(...)
+    return { n = select("#", ...), ... }
+  end
+end
 
 _M.clone = table_clone
 _M.new   = table_new
+_M.pack  = table_pack
 
 return _M
