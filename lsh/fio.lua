@@ -4,7 +4,6 @@ local ffi = require 'ffi'
 local S   = require 'syscall'
 
 local fh   = require 'lsh.fio.fh'
-local path = require 'lsh.fio.path'
 
 local _M = {}
 
@@ -31,7 +30,5 @@ function _M.open(path, flags, mode)
 
   return fh(fd)
 end
-
-_M.path = path
 
 return _M

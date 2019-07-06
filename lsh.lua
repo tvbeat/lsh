@@ -8,6 +8,7 @@ _M._VERSION = '0.1.0'
 _M.cmd      = require 'lsh.cmd'
 _M.exec     = require 'lsh.exec'
 _M.memfd    = require 'lsh.memfd'
+_M.path     = require 'lsh.path'
 _M.pipeline = require 'lsh.pipeline'
 _M.stringx  = require 'lsh.stringx'
 _M.tablex   = tablex
@@ -15,7 +16,6 @@ _M.tablex   = tablex
 local fio = require 'lsh.fio'
 -- fio methods
 _M.open = fio.open
-_M.path = fio.path
 
 local time = require 'lsh.time'
 -- time methods
