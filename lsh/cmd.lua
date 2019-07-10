@@ -8,6 +8,7 @@ local S   = require 'syscall'
 
 local libc   = require 'lsh.libc'
 local tablex = require 'lsh.tablex'
+local path   = require 'lsh.path'
 
 ffi.cdef [[
 int fileno(struct FILE* stream);
@@ -53,10 +54,16 @@ local function cmd_tbl_norm(c)
     elseif p_type == 'number' then
       cmd[i] = tostring(p)
     elseif p_type == 'table' then
-      local p_array, err = cmd_tbl_norm(p)
+      local res, err
+      -- TODO: native path support
+      if p.type and p:type() == 'path' then
+        res = tostring(p)
+      else
+        res, err = cmd_tbl_norm(p)
+      end
       if err then return nil, err end
 
-      cmd[i] = p_array
+      cmd[i] = res
     elseif p_type == 'cdata' then
       local p_str = tostring(p) -- try to convert to string (ffi.string ?)
       if not p_str then
@@ -113,6 +120,12 @@ local opt_stdfds = {
   'stderr',
 }
 
+local opt_stdfds_types = {
+  memfd = true,
+  fh =    true,
+  path =  true,
+}
+
 -- normalize options table
 -- valid options:
 --   env
@@ -134,12 +147,10 @@ local function opt_norm(o)
 
   local workdir = o.workdir
   if workdir then
-    if type(workdir) ~= 'string' then
-      return nil, 'workidir opt must be string'
-    end
+    local p, err = path.new(workdir)
+    if err then return nil, err end
 
-    -- TODO: check if valid path
-    opt.workdir = workdir
+    opt.workdir = p
   end
 
   local noglob = o.noglob
@@ -159,12 +170,14 @@ local function opt_norm(o)
       local val_type = type(val)
 
       if val_type == 'string' then -- path to file
-        -- TODO: check if string is valid path
-        opt[fd_name] = val
-      elseif val_type == 'table' then -- fh/memfd
+        local p, err = path.new(val)
+        if err then return nil, err end
+
+        opt[fd_name] = p
+      elseif val_type == 'table' then -- path/fh/memfd
         local val_obj_type = val.type and val:type()
-        if not val_obj_type == 'fh' or not val_obj_type == 'memfd' then
-          return nil, ("%s opt is table, but not memfd or fh"):format(fd_name)
+        if not opt_stdfds_types[val_obj_type] then
+          return nil, ("%s opt is table, but not path/memfd/fh type"):format(fd_name)
         end
 
         -- TODO: check fh/memfd permissions

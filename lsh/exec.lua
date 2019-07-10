@@ -2,7 +2,6 @@
 local S = require 'syscall'
 
 local cmd    = require 'lsh.cmd'
-local fio    = require 'lsh.fio'
 local libc   = require 'lsh.libc'
 local tablex = require 'lsh.tablex'
 
@@ -13,15 +12,15 @@ local function child_fds(cmd_opt)
 
   if stdin then
     local stdin_type = type(stdin)
-    if stdin_type == 'string' then
-      local fh, err = fio.open(stdin, 'rdonly', 'RUSR')
-      if err then
-        io.stderr:write(err..'\n')
-        os.exit(1)
+    if stdin_type == 'table' then -- fh/memfd/path
+      if stdin:type() == 'path' then
+        local fh, err = stdin:open('rdonly', 'RUSR')
+        if err then
+          io.stderr:write(err..'\n')
+          os.exit(1)
+        end
+        stdin = fh
       end
-      S.dup2(fh:getfd(), S.stdin)
-      fh:close()
-    elseif stdin_type == 'table' then -- fh/memfd
       S.dup2(stdin:getfd(), S.stdin)
       stdin:close()
     elseif stdin ~= S.stdin then
@@ -32,15 +31,15 @@ local function child_fds(cmd_opt)
 
   if stdout then
     local stdout_type = type(stdout)
-    if stdout_type == 'string' then
-      local fh, err = fio.open(stdout, {'creat', 'wronly', 'trunc'}, {'RUSR', 'WUSR'})
-      if err then
-        io.stderr:write(err..'\n')
-        os.exit(1)
+    if stdout_type == 'table' then -- fh/memfd/path
+      if stdout:type() == 'path' then
+        local fh, err = stdout:open({'creat', 'wronly', 'trunc'}, {'RUSR', 'WUSR'})
+        if err then
+          io.stderr:write(err..'\n')
+          os.exit(1)
+        end
+        stdout = fh
       end
-      S.dup2(fh:getfd(), S.stdout)
-      fh:close()
-    elseif stdout_type == 'table' then -- fh/memfd
       S.dup2(stdout:getfd(), S.stdout)
       stdout:close()
     elseif stdout ~= S.stdout then
@@ -53,15 +52,15 @@ local function child_fds(cmd_opt)
 
   if stderr then
     local stderr_type = type(stderr)
-    if stderr_type == 'string' then
-      local fh, err = fio.open(stderr, {'creat', 'wronly', 'trunc'}, {'RUSR', 'WUSR'})
-      if err then
-        io.stderr:write(err..'\n')
-        os.exit(1)
+    if stderr_type == 'table' then -- fh/memfd/path
+      if stderr:type() == 'path' then
+        local fh, err = stderr:open({'creat', 'wronly', 'trunc'}, {'RUSR', 'WUSR'})
+        if err then
+          io.stderr:write(err..'\n')
+          os.exit(1)
+        end
+        stderr = fh
       end
-      S.dup2(fh:getfd(), S.stderr)
-      fh:close()
-    elseif stderr_type == 'table' then -- fh/memfd
       S.dup2(stderr:getfd(), S.stderr)
       stderr:close()
     elseif stderr ~= S.stderr then
@@ -80,8 +79,10 @@ local function child_env(envs)
 end
 
 local function child_workdir(path)
-  -- write checks
-  S.chdir(path)
+  local ok, err = path:chdir()
+  if not ok then
+    error(("unable to change child workdir: %s"):format(err))
+  end
 end
 
 local function exec_cmd(cmd)
