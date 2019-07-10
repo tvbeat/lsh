@@ -41,12 +41,12 @@ end
 
 -- return 'fh' if input is fh type
 function _M.type(self)
-  if type(self) ~= 'table' then return false end
+  if type(self) ~= 'table' then return nil end
   if getmetatable(self) == fh_mt then
     return 'fh'
   end
 
-  return false
+  return nil
 end
 
 function _M.close(self)

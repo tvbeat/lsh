@@ -273,13 +273,13 @@ end
 -- return "cmd" if input is cmd type and
 -- type of command (table/function)
 function _M.type(self)
-  if type(self) ~= 'table' then return false end
+  if type(self) ~= 'table' then return nil end
   local is_cmd = getmetatable(self) == cmd_mt
   if is_cmd then
     return 'cmd', type(self.cmd)
   end
 
-  return false
+  return nil
 end
 
 function _M.set_opt(self, o)

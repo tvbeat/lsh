@@ -32,12 +32,12 @@ end
 
 -- return 'memfd' if input is memfd type
 function _M.type(self)
-  if type(self) ~= 'table' then return false end
+  if type(self) ~= 'table' then return nil end
   if getmetatable(self) == memfd_mt then
     return 'memfd'
   end
 
-  return false
+  return nil
 end
 
 function _M.close(self)

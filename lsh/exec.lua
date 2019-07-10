@@ -204,12 +204,12 @@ end
 
 -- return "exec" if input is exec type
 function _M.type(self)
-  if type(self) ~= 'table' then return false end
+  if type(self) ~= 'table' then return nil end
   if getmetatable(self) == exec_mt then
     return 'exec'
   end
 
-  return false
+  return nil
 end
 
 function _M.wait(self)

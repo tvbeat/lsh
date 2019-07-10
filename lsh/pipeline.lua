@@ -78,6 +78,16 @@ function _M.clone(self)
   return p
 end
 
+-- return 'pipeline' if input is pipeline type
+function _M.type(self)
+  if type(self) ~= 'table' then return nil end
+  if getmetatable(self) == pipeline_mt then
+    return 'pipeline'
+  end
+
+  return nil
+end
+
 function _M.add(self, c, o)
   local c_type = type(c)
   assert(c_type == 'table' or c_type == 'function',
