@@ -1,4 +1,5 @@
--- memfd - in memory anonymous file
+--- in-memory anonymous file
+-- @module lsh.memfd
 
 local S = require 'syscall'
 
@@ -13,6 +14,7 @@ local memfd_mt = {
   end,
 }
 
+--- new
 function _M.new(buf, len)
   -- No need to worry about closing fd, it has close method assigned to __gc
   -- in ffi metatable (ljsyscall syscall/methods.lua#L152)
@@ -30,6 +32,7 @@ function _M.new(buf, len)
   return memfd
 end
 
+--- get type
 -- return 'memfd' if input is memfd type
 function _M.type(self)
   if type(self) ~= 'table' then return false end
@@ -40,26 +43,32 @@ function _M.type(self)
   return false
 end
 
+--- close
 function _M.close(self)
   return self.fh:close()
 end
 
+--- write
 function _M.write(self, buf, len)
   return self.fh:write(buf, len)
 end
 
+--- read
 function _M.read(self, buf, size)
   return self.fh:read(buf, size)
 end
 
+--- seek
 function _M.seek(self, position)
   return self.fh:seek(position)
 end
 
+--- lines
 function _M.lines(self)
   return self.fh:lines()
 end
 
+--- getfd
 function _M.getfd(self)
   return self.fh:getfd()
 end

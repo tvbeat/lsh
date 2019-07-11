@@ -1,3 +1,6 @@
+--- libc bindings
+-- @module lsh.libc
+
 local ffi = require 'ffi'
 local S   = require 'syscall'
 
@@ -53,6 +56,9 @@ local function arg_str(ar)
   return tablex.concat(ret, ' ')
 end
 
+--- execvp
+-- @param cmdargs table
+-- @return (result, error)
 function _M.execvp(cmdargs)
   local cmdargs_len = #cmdargs
   local cargs = string_array_t(cmdargs_len + 1)
@@ -80,6 +86,9 @@ local function glob_callback(path, eerrno)
 end
 local glob_callback_c = ffi.cast("int (*)(const char *, int)", glob_callback)
 
+--- glob
+-- @param str string
+-- @return string
 function _M.glob(str)
   if type(str) ~= 'string' then
     return nil, 'not a string'

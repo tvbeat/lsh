@@ -1,4 +1,5 @@
--- fio.path - pathname manipulations
+--- pathname manipulations
+-- @module lsh.fio.path
 
 local ffi = require 'ffi'
 local S   = require 'syscall'

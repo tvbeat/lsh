@@ -5,4 +5,5 @@ before_script:
 
 test:
   script:
-    - nix-shell --run ltest
+    - nix-shell --run check
+    - nix-shell --run doc

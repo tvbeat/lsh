@@ -1,4 +1,5 @@
--- fio - file input/output
+--- fio - file input/output
+-- @module lsh.fio
 
 local ffi = require 'ffi'
 local S   = require 'syscall'
@@ -8,6 +9,12 @@ local path = require 'lsh.fio.path'
 
 local _M = {}
 
+
+--- open file
+-- @param path string
+-- @param flags table
+-- @param mode table
+-- @return file handle
 function _M.open(path, flags, mode)
   assert(type(path) == 'string', 'path must be string')
 
@@ -32,6 +39,8 @@ function _M.open(path, flags, mode)
   return fh(fd)
 end
 
+
+--- @{lsh.fio.path}
 _M.path = path
 
 return _M

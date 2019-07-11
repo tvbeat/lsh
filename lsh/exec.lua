@@ -1,4 +1,6 @@
--- exec structure
+--- exec structure
+-- @module lsh.exec
+
 local S = require 'syscall'
 
 local cmd    = require 'lsh.cmd'
@@ -171,6 +173,10 @@ local exec_mt = {
     end,
 }
 
+--- create new @{exec} instance
+-- @param c table or function
+-- @param o ${exec} or table or function
+-- @return new ${exec} instance
 function _M.new(c, o)
   local c_type = type(c)
   assert(c_type == 'table' or c_type == 'function',
@@ -193,6 +199,11 @@ function _M.new(c, o)
   return setmetatable({cmd = cmd_}, exec_mt)
 end
 
+
+--- clone ${exec} instance
+-- @param self ${exec}
+-- @param o table
+-- @return ${exec}
 function _M.clone(self, o)
   assert(self)
   local cmd_ = self.cmd:clone()
@@ -201,7 +212,8 @@ function _M.clone(self, o)
   return _M.new(cmd_)
 end
 
--- return "exec" if input is exec type
+--- check that this is an @{exec}
+-- @return "exec" if input is exec type, else `false`
 function _M.type(self)
   if type(self) ~= 'table' then return false end
   if getmetatable(self) == exec_mt then
@@ -211,6 +223,10 @@ function _M.type(self)
   return false
 end
 
+
+--- wait for @{exec} to finish
+-- @param self @{exec}
+-- @return self
 function _M.wait(self)
   local pid = self.pid
   if not pid then return nil end
@@ -229,6 +245,10 @@ function _M.wait(self)
   return self
 end
 
+--- get @{exec} status
+-- @param self @{exec}
+-- @param wait bool
+-- @return { pid : int. alive : bool, exit_status : int }
 -- TODO: return nice metatable
 function _M.status(self, wait)
   local pid = self.pid
@@ -268,6 +288,10 @@ function _M.status(self, wait)
   }
 end
 
+
+--- set ${exec} options
+-- @param self ${exec}
+-- @param o table
 function _M.set_opt(self, o)
   if type(o) ~= 'table' then return nil end
   self.cmd:set_opt(o)
@@ -275,14 +299,23 @@ function _M.set_opt(self, o)
   return self
 end
 
+--- get stdin file descriptor
+-- @param self ${exec}
+-- @return fd
 function _M.stdin(self)
   return stdfd(self, 'stdin')
 end
 
+--- get stdout file descriptor
+-- @param self ${exec}
+-- @return fd
 function _M.stdout(self)
   return stdfd(self, 'stdout')
 end
 
+--- get stderr file descriptor
+-- @param self ${exec}
+-- @return fd
 function _M.stderr(self)
   return stdfd(self, 'stderr')
 end

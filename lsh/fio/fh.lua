@@ -1,4 +1,5 @@
--- fio.fh - file handle
+--- file handle
+-- @module lsh.fio.fh
 
 local ffi = require 'ffi'
 local S   = require 'syscall'
@@ -32,6 +33,10 @@ local fh_mt = {
   end,
 }
 
+
+--- new file handle
+-- @param fd file descriptor
+-- @return @{fh}
 function _M.new(fd)
   -- TODO: proper check, convert lua file handle
   assert(type(fd) == 'cdata', 'input must be ljsyscall fd')
@@ -39,7 +44,10 @@ function _M.new(fd)
   return setmetatable({fd = fd}, fh_mt)
 end
 
--- return 'fh' if input is fh type
+
+--- check that this is a @{fh}
+-- @param self any
+-- @return 'fh' if input is fh type, else `false`
 function _M.type(self)
   if type(self) ~= 'table' then return false end
   if getmetatable(self) == fh_mt then
@@ -49,6 +57,8 @@ function _M.type(self)
   return false
 end
 
+--- close
+-- @return bool
 function _M.close(self)
   local ok, err = self.fd:close()
   if err then
@@ -58,8 +68,10 @@ function _M.close(self)
   return ok
 end
 
--- write(str)
+--- write
+-- write(str) <br/>
 -- write(buf, len)
+-- @return bool
 function _M.write(self, buf, len)
   local offset = self.offset or offset_t(0)
 
@@ -83,8 +95,10 @@ end
 local rsize = 4096 -- size of default read buffer
 local rbuf = buf_t(rsize)
 
--- read(size) -> str
+--- read
+-- read(size) -> str <br/>
 -- read(buf, size) -> len
+-- @return TODO
 function _M.read(self, buf, size)
   local offset = self.offset or offset_t(0)
   local tmpbuf
@@ -123,7 +137,11 @@ function _M.read(self, buf, size)
   return res
 end
 
+--- seek
 -- TODO
+-- @param self @{fh}
+-- @param position number
+-- @return number
 function _M.seek(self, position)
   assert(type(position) == 'number')
   --local cur = self.fd:tell()
@@ -132,16 +150,20 @@ function _M.seek(self, position)
   return tonumber(self.offset)
 end
 
--- read line by line, similar to io.lines
---
--- TODO:
---  * implementation is portable and simple to understand
---    but very slow, options are to move pointer arithmetic
---    to plain C or ditch mmap completely
---  * in !GC64 mode we should find address for mmap outside
---    of lower 4G to not mess with LuaJIT allocations
---  * optional delimiter flag
+
+--- read line by line, similar to io.lines
+-- @param self @{fh}
+-- @return TODO
 function _M.lines(self)
+
+  --[[--TODO:
+    * implementation is portable and simple to understand
+      but very slow, options are to move pointer arithmetic
+      to plain C or ditch mmap completely<br/>
+    * in !GC64 mode we should find address for mmap outside
+      of lower 4G to not mess with LuaJIT allocations<br/>
+    * optional delimiter flag
+  --]]
   local nl = string.byte('\n')
   local cr = string.byte('\r')
 
@@ -211,6 +233,8 @@ function _M.lines(self)
   end
 end
 
+--- getfd
+-- @return fd
 function _M.getfd(self)
   return self.fd:getfd()
 end

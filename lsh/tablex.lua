@@ -1,4 +1,5 @@
--- tablex - table extensions
+--- table extensions
+-- @module lsh.tablex
 
 local type, pairs = type, pairs
 local getmetatable, setmetatable = getmetatable, setmetatable
@@ -58,7 +59,14 @@ if not ok or type(table_new) ~= "function" then
 end
 
 
+--- clone table
+-- @function clone
+-- @return table
 _M.clone = table_clone
+
+--- new table
+-- @function new
+-- @return table
 _M.new   = table_new
 
 return _M

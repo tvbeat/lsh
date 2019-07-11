@@ -1,3 +1,6 @@
+--- command pipelines
+-- @module lsh.pipeline
+
 local S      = require 'syscall'
 
 local exec   = require 'lsh.exec'
@@ -61,6 +64,7 @@ local pipeline_mt = {
   end,
 }
 
+--- new
 function _M.new()
   return setmetatable({execs = {}}, pipeline_mt)
 end
@@ -78,6 +82,7 @@ function _M.clone(self)
   return p
 end
 
+--- add
 function _M.add(self, c, o)
   local c_type = type(c)
   assert(c_type == 'table' or c_type == 'function',
@@ -98,6 +103,7 @@ function _M.add(self, c, o)
   return self
 end
 
+--- exec
 function _M.exec(self, o)
   local exec_ = self.execs[1] -- take the first one
   if not exec_ then return nil, 'nothing to execute' end
@@ -109,6 +115,7 @@ function _M.exec(self, o)
   return self
 end
 
+--- wait
 function _M.wait(self)
   local execs = self.execs
   local execs_len = #execs
@@ -123,6 +130,7 @@ function _M.wait(self)
   return self
 end
 
+--- status
 -- TODO: return nice metatable
 function _M.status(self, wait)
   local execs = self.execs

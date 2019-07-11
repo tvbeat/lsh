@@ -1,7 +1,6 @@
--- cmd structure
---
--- Create and manupulate command and its options
---
+--- cmd structure
+-- Create and manupulate commands and arguments.
+-- @module lsh.cmd
 
 local ffi = require 'ffi'
 local S   = require 'syscall'
@@ -229,7 +228,10 @@ local cmd_mt = {
   end,
 }
 
--- create new cmd instance and normalize input
+--- create new @{cmd} instance and normalize input
+-- @param c table or function
+-- @param o table
+-- @return new @{cmd} instance
 function _M.new(c, o)
   local c_type = type(c)
   assert(c_type == 'table' or c_type == 'function',
@@ -248,7 +250,11 @@ function _M.new(c, o)
   return setmetatable({cmd = cn, opt = on}, cmd_mt)
 end
 
-function _M.clone(self, o)
+
+--- clone cmd instance
+-- @param self @{cmd}
+-- @return new @{cmd} instance, clone of `self`
+function _M.clone(self)
   assert(self)
 
   return setmetatable({
@@ -257,8 +263,9 @@ function _M.clone(self, o)
   }, cmd_mt)
 end
 
--- return "cmd" if input is cmd type and
--- type of command (table/function)
+--- get the type of a command (table or function)
+-- @param self @{cmd}
+-- @return `("cmd", command_type)` where command_type is `table` or `function` if the input is a cmd, else `false`
 function _M.type(self)
   if type(self) ~= 'table' then return false end
   local is_cmd = getmetatable(self) == cmd_mt
@@ -269,6 +276,11 @@ function _M.type(self)
   return false
 end
 
+
+--- set command options
+-- @param self @{cmd}
+-- @param o table
+-- @return self
 function _M.set_opt(self, o)
   if type(o) ~= 'table' then return nil end
   local opt, err = opt_norm(o)
@@ -282,6 +294,10 @@ function _M.set_opt(self, o)
   return self
 end
 
+
+--- evaluate globs in a table cmd.
+-- @param self @{cmd}
+-- @return self
 function _M.glob(self)
   local cmd = self.cmd
   if type(cmd) == 'function' then

@@ -1,4 +1,5 @@
--- stringx - extended string module
+--- stringx - extended string module
+-- @module lsh.stringx
 
 local ffi = require('ffi')
 
@@ -77,7 +78,12 @@ end
 
 local _M = string
 
+--- split string at separator
 -- based on tarantool (2.1): src/lua/string.lua
+-- @param inp string
+-- @param sep optional string
+-- @param max optional int
+-- @return table
 function _M.split(inp, sep, max)
   if type(inp) ~= 'string' then
     error(err_string_arg:format(1, 'string.split', 'string', type(inp)), 2)
