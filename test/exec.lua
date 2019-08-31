@@ -43,6 +43,16 @@ do
 end
 
 --
+print "\n-- exec succeed --"
+--
+
+assert(pcall(function () sh.exec({'true'}):succeed() end))
+
+print(pcall(function () sh.exec({'false'}):succeed() end))
+assert(not pcall(function () sh.exec({'false'}):succeed() end))
+
+
+--
 print( "\n-- exec function --" )
 --
 

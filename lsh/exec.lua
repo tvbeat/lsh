@@ -230,6 +230,14 @@ function _M.wait(self)
   return self
 end
 
+function _M.succeed(self)
+  self:wait()
+  if not (self.exit_status == 0) then
+    error("command `" .. tostring(self.cmd) .. "` failed with exit code " .. tostring(exit_status))
+  end
+  return self
+end
+
 -- TODO: return nice metatable
 function _M.status(self, wait)
   local pid = self.pid
