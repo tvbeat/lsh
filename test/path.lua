@@ -5,6 +5,7 @@ print(p.path)
 local p2 = p:joinpath('resolv.conf')
 print(p2.name)
 print(p2.parent)
+assert(p2.suffix == '.conf')
 assert((p2:exists()))
 
 local p3 = p2.parent

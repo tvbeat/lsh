@@ -120,12 +120,41 @@ function attrs.parents(p)
   error('not implemented')
 end
 
+-- split a path into root and extension part
+local function splitext(path)
+  local i = #path
+  local ch = path:sub(i, i)
+  while i > 0 and ch ~= '.' do
+    if ch == '/' then
+      return path, ''
+    end
+    i = i - 1
+    ch = path:sub(i, i)
+  end
+
+  if i == 0 then
+    return path, ''
+  end
+
+  return path:sub(1, i-1), path:sub(i)
+end
+
 function attrs.suffix(p)
-  error('not implemented')
+  local _, ext = splitext(p.path)
+  return ext
 end
 
 function attrs.suffixes(p)
-  error('not implemented')
+  local path, ext = p.path
+  local ret = {}
+
+  while true do
+    path, ext = splitext(path)
+    if ext == '' then
+      return ret
+    end
+    table.insert(ret, ext)
+  end
 end
 
 function attrs.stem(p)
