@@ -1,4 +1,4 @@
-local S      = require 'syscall'
+local S = require 'syscall'
 
 local exec   = require 'lsh.exec'
 local tablex = require 'lsh.tablex'
@@ -43,7 +43,7 @@ end
 -- }
 --
 
-local _M = {}
+local _M = tablex.new(0, 7)
 local pipeline_mt = {
   __index = _M,
   __tostring = function(t)
@@ -51,10 +51,10 @@ local pipeline_mt = {
     local ret = tablex.new(len, 0)
 
     for i=1,len do
-      tablex.insert(ret, string.format('%s', t.execs[i]))
+      table.insert(ret, string.format('%s', t.execs[i]))
     end
 
-    return tablex.concat(ret, '\n')
+    return table.concat(ret, '\n')
   end,
   __call = function(t, o)
     return t:exec(o)
@@ -103,7 +103,7 @@ function _M.add(self, c, o)
     exec_ = exec.new(c, o)
   end
 
-  tablex.insert(self.execs, exec_)
+  table.insert(self.execs, exec_)
 
   return self
 end

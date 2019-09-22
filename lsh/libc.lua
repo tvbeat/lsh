@@ -1,5 +1,4 @@
 local ffi = require 'ffi'
-local S   = require 'syscall'
 
 local tablex = require 'lsh.tablex'
 
@@ -29,7 +28,7 @@ local function ffi_error()
   return ffi.string(C.strerror(ffi.errno()))
 end
 
-local _M = {}
+local _M = tablex.new(0, 2)
 
 local function arg_str(ar)
   if type(ar) == 'string' then
@@ -50,7 +49,7 @@ local function arg_str(ar)
     end
   end
 
-  return tablex.concat(ret, ' ')
+  return table.concat(ret, ' ')
 end
 
 function _M.execvp(cmdargs)

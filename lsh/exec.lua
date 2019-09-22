@@ -160,7 +160,7 @@ end
 --   exit_status -- number
 -- }
 --
-local _M = {}
+local _M = tablex.new(0, 9)
 local exec_mt = {
   __index = _M,
   __tostring = function(t)
@@ -247,10 +247,10 @@ function _M.status(self, wait)
 
   local options = {'exited', 'nohang'}
   if not wait then
-    tablex.insert(options, 'nowait')
+    table.insert(options, 'nowait')
   end
 
-  local infop = S.waitid('pid', pid, tablex.concat(options, ', '))
+  local infop = S.waitid('pid', pid, table.concat(options, ', '))
 
   if infop then
     alive = infop.code == 0 or false

@@ -2,7 +2,9 @@
 
 local S = require 'syscall'
 
-local _M = {}
+local tablex = require 'lsh.tablex'
+
+local _M = tablex.new(0, 1)
 
 function _M.sleep(sec)
   assert(type(sec) == 'number', 'arg must be number')

@@ -23,14 +23,14 @@ local function cmd_glob(cmd)
   for i=1,cmd_len do
     local p = cmd[i]
     if type(p) == 'table' then -- glob only first level
-      tablex.insert(cmd_globbed, p)
+      table.insert(cmd_globbed, p)
     else
       local res, err = libc.glob(p)
 
       if err then -- skip glob error
-        tablex.insert(cmd_globbed, p)
+        table.insert(cmd_globbed, p)
       else
-        for y=1,#res do tablex.insert(cmd_globbed, res[y]) end
+        for y=1,#res do table.insert(cmd_globbed, res[y]) end
       end
     end
   end
@@ -111,7 +111,7 @@ local function cmd_str(c)
     end
   end
 
-  return tablex.concat(ret, ' ')
+  return table.concat(ret, ' ')
 end
 
 local opt_stdfds = {
@@ -234,7 +234,7 @@ end
 -- TODO:
 -- - cmd manipulation methods (push/pop/..)
 --
-local _M = {}
+local _M = tablex.new(0, 5)
 local cmd_mt = {
   __index = _M,
   __tostring = function(t)

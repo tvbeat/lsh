@@ -3,8 +3,8 @@
 local ffi = require 'ffi'
 local S = require 'syscall'
 
-local tablex = require 'lsh.tablex'
 local fio    = require 'lsh.fio'
+local tablex = require 'lsh.tablex'
 
 ffi.cdef [[
 char *dirname(char *path);
@@ -85,8 +85,8 @@ local function join(...)
   return norm_path(path)
 end
 
-local methods = {}
-local attrs = {}
+local methods = tablex.new(0, 25)
+local attrs = tablex.new(0, 8)
 
 local path_mt = {
   __index = function (t, k)
@@ -169,7 +169,7 @@ function attrs.parts(p)
   end
 
   for sp in string.gmatch(p.path, '[^/]+') do
-    tablex.insert(parts, sp)
+    table.insert(parts, sp)
   end
 
   return parts
@@ -223,9 +223,9 @@ function methods.resolve(self)
 
   for sp in string.gmatch(joined_path, '[^/]+') do
     if sp == '..' then
-      tablex.remove(path_tab)
+      table.remove(path_tab)
     elseif sp ~= '.' then
-      tablex.insert(path_tab, sp)
+      table.insert(path_tab, sp)
     end
   end
 
@@ -486,7 +486,7 @@ function methods.unlink(self)
   return ok
 end
 
-local _M = {}
+local _M = tablex.new(0, 3)
 
 function _M.new(...)
   return methods.new(...)

@@ -18,13 +18,13 @@ local function fh_str(fh)
   while true do
     local part = fh:read()
     if part == '' then break end
-    tablex.insert(res, part)
+    table.insert(res, part)
   end
 
-  return tablex.concat(res)
+  return table.concat(res)
 end
 
-local _M = {}
+local _M = tablex.new(0, 8)
 local fh_mt = {
   __index = _M,
   __tostring = function(t)

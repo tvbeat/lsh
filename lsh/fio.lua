@@ -1,11 +1,11 @@
 -- fio - file input/output
 
-local ffi = require 'ffi'
-local S   = require 'syscall'
+local S = require 'syscall'
 
-local fh   = require 'lsh.fio.fh'
+local fh     = require 'lsh.fio.fh'
+local tablex = require 'lsh.tablex'
 
-local _M = {}
+local _M = tablex.new(0, 1)
 
 function _M.open(path, flags, mode)
   assert(type(path) == 'string', 'path must be string')

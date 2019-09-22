@@ -5,7 +5,7 @@ local S = require 'syscall'
 local fh     = require 'lsh.fio.fh'
 local tablex = require 'lsh.tablex'
 
-local _M = {}
+local _M = tablex.new(0, 8)
 local memfd_mt = {
   __index = _M,
   __tostring = function(t)

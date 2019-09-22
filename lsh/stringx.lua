@@ -1,6 +1,8 @@
 -- stringx - extended string module
 
-local ffi = require('ffi')
+local ffi = require 'ffi'
+
+local tablex = require 'lsh.tablex'
 
 ffi.cdef[[
   const char *memmem(const char *haystack, size_t haystack_len,
@@ -13,7 +15,7 @@ local c_char_ptr = ffi.typeof('const char *')
 local memmem  = ffi.C.memmem
 local isspace = ffi.C.isspace
 
-local err_string_arg = "bad argument #%d to '%s' (%s expected, got %s)"
+local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
 local function string_split_empty(inp, maxsplit)
   local p = c_char_ptr(inp)
@@ -50,8 +52,7 @@ local function string_split(inp, sep, maxsplit)
   local p_end = p + #inp
   local sep_len = #sep
   if sep_len == 0 then
-    error(err_string_arg:format(2, 'string.split', 'non-empty string',
-          "empty string"), 3)
+    error(err_str:format(2, 'split', 'non-empty string', 'empty string'), 3)
   end
   local rv = {}
 
@@ -75,19 +76,18 @@ local function string_split(inp, sep, maxsplit)
   return rv
 end
 
-local _M = string
+local _M = tablex.new(0, 1)
 
 -- based on tarantool (2.1): src/lua/string.lua
 function _M.split(inp, sep, max)
   if type(inp) ~= 'string' then
-    error(err_string_arg:format(1, 'string.split', 'string', type(inp)), 2)
+    error(err_str:format(1, 'split', 'string', type(inp)), 2)
   end
   if sep ~= nil and type(sep) ~= 'string' then
-    error(err_string_arg:format(2, 'string.split', 'string', type(sep)), 2)
+    error(err_str:format(2, 'split', 'string', type(sep)), 2)
   end
   if max ~= nil and (type(max) ~= 'number' or max < 0) then
-    error(err_string_arg:format(3, 'string.split', 'positive integer',
-                                type(max)), 2)
+    error(err_str:format(3, 'split', 'positive integer', type(max)), 2)
   end
   max = max or 0xffffffff
 
