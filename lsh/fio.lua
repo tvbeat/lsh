@@ -5,15 +5,17 @@ local S = require 'syscall'
 local fh     = require 'lsh.fio.fh'
 local tablex = require 'lsh.tablex'
 
+local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
+
 local _M = tablex.new(0, 1)
 
 function _M.open(path, flags, mode)
-  assert(type(path) == 'string', 'path must be string')
-
+  if type(path) ~= 'string' then
+    error(err_str:format(1, 'open', 'string', type(path)), 2)
+  end
   if type(flags) ~= 'table' then
     flags = { flags }
   end
-
   if type(mode) ~= 'table' then
     mode = { mode }
   end

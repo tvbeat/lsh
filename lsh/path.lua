@@ -6,6 +6,8 @@ local S = require 'syscall'
 local fio    = require 'lsh.fio'
 local tablex = require 'lsh.tablex'
 
+local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
+
 ffi.cdef [[
 char *dirname(char *path);
 ]]
@@ -311,10 +313,11 @@ function methods.ischar(self)
 end
 
 function methods.setxattr(self, name, value, flag)
-  assert(type(name) == 'string', 'name must be string')
-  value = tostring(value)
-  if not value then
-    return nil, 'no value'
+  if type(name) ~= 'string' then
+    error(err_str:format(2, 'setxattr', 'string', type(name)), 2)
+  end
+  if type(value) ~= 'string' then
+    error(err_str:format(3, 'setxattr', 'string', type(value)), 2)
   end
 
   local ok, err = S.setxattr(self.path, name, value, flag)
@@ -326,7 +329,10 @@ function methods.setxattr(self, name, value, flag)
 end
 
 function methods.getxattr(self, name)
-  assert(type(name) == 'string', 'name must be string')
+  if type(name) ~= 'string' then
+    error(err_str:format(2, 'getxattr', 'string', type(name)), 2)
+  end
+
   local res, err = S.getxattr(self.path, name)
   if err then
     return nil, tostring(err)
@@ -336,7 +342,10 @@ function methods.getxattr(self, name)
 end
 
 function methods.removexattr(self, name)
-  assert(type(name) == 'string', 'name must be string')
+  if type(name) ~= 'string' then
+    error(err_str:format(2, 'removexattr', 'string', type(name)), 2)
+  end
+
   local ok, err = S.removexattr(self.path, name)
   if err then
     return nil, tostring(err)
@@ -388,8 +397,8 @@ function methods.mkdir(self, mode, parents, exists)
     end
   end
 
-  if mode then
-    assert(type(mode) == 'string', 'mode must be string')
+  if mode and type(mode) ~= 'string' then
+    error(err_str:format(2, 'mkdir', 'string or nil', type(mode)), 2)
   else
     mode = '0755'
   end
@@ -458,17 +467,18 @@ function methods.lsdir(self)
 end
 
 function methods.touch(self, mode, exists)
-  exists = exists or true
-  if self:exists() then
-    if exists then
-      S.utime(self.path)
-      return true
-    else
-      return nil, 'file exists'
-    end
+  if self:exists() and exists then
+    S.utime(self.path)
+    return true
+  else
+    return nil, 'file exists'
+  end
+  if mode and type(mode) ~= 'string' then
+    error(err_str:format(2, 'touch', 'string or nil', type(mode)), 2)
+  else
+    mode = '0666'
   end
 
-  mode = mode or '0666'
   local ok, err = S.creat(self.path, mode)
   if err then
     return nil, tostring(err)

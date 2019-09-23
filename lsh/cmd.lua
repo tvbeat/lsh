@@ -10,6 +10,8 @@ local libc   = require 'lsh.libc'
 local tablex = require 'lsh.tablex'
 local path   = require 'lsh.path'
 
+local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
+
 ffi.cdef [[
 int fileno(struct FILE* stream);
 ]]
@@ -245,14 +247,19 @@ local cmd_mt = {
 -- create new cmd instance and normalize input
 function _M.new(c, o)
   local c_type = type(c)
-  assert(c_type == 'table' or c_type == 'function',
-         'first arg must be table or function')
+  if c_type ~= 'table' then
+    if c_type ~= 'function' then
+      error(err_str:format(1, 'new', 'table or function', c_type), 2)
+    end
+  end
   local cn, err = cmd_norm(c)
   if err then return nil, err end
 
   local on = {}
   if o then
-    assert(type(o) == 'table', 'second arg must be table')
+    if type(o) ~= 'table' then
+      error(err_str:format(2, 'new', 'table or nil', c_type), 2)
+    end
     local err
     on, err = opt_norm(o)
     if err then return nil, err end
@@ -283,7 +290,9 @@ function _M.type(self)
 end
 
 function _M.set_opt(self, o)
-  if type(o) ~= 'table' then return nil end
+  if type(o) ~= 'table' then
+    error(err_str:format(2, 'set_opt', 'table or nil', type(o)), 2)
+  end
   local opt, err = opt_norm(o)
   if err then return nil, err end
 

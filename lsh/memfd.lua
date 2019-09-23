@@ -5,6 +5,8 @@ local S = require 'syscall'
 local fh     = require 'lsh.fio.fh'
 local tablex = require 'lsh.tablex'
 
+local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
+
 local _M = tablex.new(0, 8)
 local memfd_mt = {
   __index = _M,
@@ -14,6 +16,13 @@ local memfd_mt = {
 }
 
 function _M.new(buf, len)
+  if buf and type(buf) ~= 'string' then
+    error(err_str:format(1, 'new', 'string or nil', type(buf)), 2)
+  end
+  if len and type(len) ~= 'number' then
+    error(err_str:format(2, 'new', 'number', type(len)), 2)
+  end
+
   -- No need to worry about closing fd, it has close method assigned to __gc
   -- in ffi metatable (ljsyscall syscall/methods.lua#L152)
   local fd, err = S.memfd_create('', 'cloexec') -- TODO: sealing

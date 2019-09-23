@@ -5,6 +5,8 @@ local cmd    = require 'lsh.cmd'
 local libc   = require 'lsh.libc'
 local tablex = require 'lsh.tablex'
 
+local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
+
 local function child_fds(cmd_opt)
   local stdin  = cmd_opt.stdin
   local stdout = cmd_opt.stdout
@@ -174,10 +176,13 @@ local exec_mt = {
 
 function _M.new(c, o)
   local c_type = type(c)
-  assert(c_type == 'table' or c_type == 'function',
-         'first arg must be table or function')
-  if o then
-    assert(type(o) == 'table', 'second arg must be table')
+  if c_type ~= 'table' then
+    if c_type ~= 'function' then
+      error(err_str:format(1, 'new', 'table or function', c_type), 2)
+    end
+  end
+  if o and type(o) ~= 'table' then
+    error(err_str:format(2, 'new', 'table or nil', c_type), 2)
   end
 
   local cmd_, err
@@ -270,7 +275,9 @@ function _M.status(self, wait)
 end
 
 function _M.set_opt(self, o)
-  if type(o) ~= 'table' then return nil end
+  if type(o) ~= 'table' then
+    error(err_str:format(2, 'set_opt', 'table or nil', type(o)), 2)
+  end
   self.cmd:set_opt(o)
 
   return self

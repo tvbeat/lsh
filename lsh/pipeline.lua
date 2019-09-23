@@ -3,7 +3,7 @@ local S = require 'syscall'
 local exec   = require 'lsh.exec'
 local tablex = require 'lsh.tablex'
 
-local string = string
+local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
 local function exec_pipeline(execs)
   local execs_len = #execs
@@ -90,10 +90,13 @@ end
 
 function _M.add(self, c, o)
   local c_type = type(c)
-  assert(c_type == 'table' or c_type == 'function',
-         'first arg must be table or function')
-  if o then
-    assert(type(o) == 'table', 'second arg must be table')
+  if c_type ~= 'table' then
+    if c_type ~= 'function' then
+      error(err_str:format(1, 'new', 'table or function', c_type), 2)
+    end
+  end
+  if o and type(o) ~= 'table' then
+    error(err_str:format(2, 'new', 'table or nil', c_type), 2)
   end
 
   local exec_

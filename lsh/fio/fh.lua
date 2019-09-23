@@ -5,6 +5,8 @@ local S   = require 'syscall'
 
 local tablex = require 'lsh.tablex'
 
+local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
+
 local buf_t = ffi.typeof('char[?]')
 local offset_t = ffi.typeof('uint64_t')
 
@@ -34,7 +36,9 @@ local fh_mt = {
 
 function _M.new(fd)
   -- TODO: proper check, convert lua file handle
-  assert(type(fd) == 'cdata', 'input must be ljsyscall fd')
+  if type(fd) ~= 'cdata' then
+    error(err_str:format(1, 'new', 'cdata', type(fd)), 2)
+  end
 
   return setmetatable({fd = fd}, fh_mt)
 end
@@ -62,12 +66,14 @@ end
 -- write(buf, len)
 function _M.write(self, buf, len)
   local offset = self.offset or offset_t(0)
+  local buf_type = type(buf)
 
-  if type(buf) == 'cdata' then
-    assert(type(len) == 'number')
-  else
-    buf = tostring(buf)
+  if buf_type == 'string' then
     len = #buf
+  elseif buf_type == 'cdata' and type(len) ~= 'number' then
+    error(err_str:format(3, 'write', 'number', type(len)), 2)
+  else
+    error(err_str:format(2, 'write', 'string or cdata', buf_type), 2)
   end
 
   local res, err = self.fd:pwrite(buf, len, offset)
@@ -87,26 +93,23 @@ local rbuf = buf_t(rsize)
 -- read(buf, size) -> len
 function _M.read(self, buf, size)
   local offset = self.offset or offset_t(0)
+  local buf_type = type(buf)
   local tmpbuf
 
-  if type(buf) == 'cdata' then
-    assert(type(size) == 'number')
-  else
-    if buf then -- buf is holding size
-      assert(type(buf) == 'number')
-      size = buf
-    end
+  if not buf or buf_type == 'number' then
+    size = buf -- buf is holding size
 
     tmpbuf = rbuf -- try to reuse allocated buffer
-    if size then
-      assert(type(size) == 'number')
-      if size > rsize then
-        -- if provided size is bigger than default allocate new buf
-        tmpbuf = buf_t(size)
-      end
+    if size and size > rsize then
+      -- if provided size is bigger than default allocate new buf
+      tmpbuf = buf_t(size)
     else
       size = rsize
     end
+  elseif buf_type == 'cdata' and type(size) ~= 'number' then
+    error(err_str:format(3, 'read', 'number', type(size)), 2)
+  else
+    error(err_str:format(2, 'read', 'number or cdata', buf_type), 2)
   end
 
   local res, err = self.fd:pread(tmpbuf or buf, size, offset)
@@ -125,7 +128,9 @@ end
 
 -- TODO
 function _M.seek(self, position)
-  assert(type(position) == 'number')
+  if type(position) ~= 'number' then
+    error(err_str:format(2, 'seek', 'number', type(position)), 2)
+  end
   --local cur = self.fd:tell()
   self.offset = offset_t(position)
 
