@@ -10,7 +10,7 @@ if not ok or type(table_new) ~= 'function' then
   table_new = function(narr, nrec) return {} end
 end
 
-local _M = table_new(0, 6)
+local _M = table_new(0, 7)
 
 _M.new = table_new
 
@@ -67,6 +67,17 @@ if not ok or type(table_clone) ~= 'function' then
 end
 
 _M.clone = table_clone
+
+local ok, table_clear = pcall(require, 'table.clear')
+if not ok then
+  table_clear = function(tbl)
+    for k, _ in pairs(tbl) do
+      tbl[k] = nil
+    end
+  end
+end
+
+_M.clear = table_clear
 
 local ok, table_pack = pcall(require, 'table.pack')
 if not ok or type(table_pack) ~= 'function' then
