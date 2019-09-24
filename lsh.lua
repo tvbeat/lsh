@@ -1,12 +1,11 @@
 local tablex = require 'lsh.tablex'
 
 -- lsh module
-local _M = tablex.new(0, 10)
-_M._VERSION = '0.1.0'
+local _M = tablex.new(0, 9)
+_M._VERSION = 'lsh 0.2.0'
 
 -- submodules
 _M.cmd      = require 'lsh.cmd'
-_M.exec     = require 'lsh.exec'
 _M.memfd    = require 'lsh.memfd'
 _M.path     = require 'lsh.path'
 _M.pipeline = require 'lsh.pipeline'

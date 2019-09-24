@@ -1,166 +1,93 @@
 local S = require 'syscall'
 
-local exec   = require 'lsh.exec'
+local cmd    = require 'lsh.cmd'
 local tablex = require 'lsh.tablex'
-
-local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
-
-local function exec_pipeline(execs)
-  local execs_len = #execs
-  local in_
-
-  for i=1,execs_len do
-    local r, w
-
-    if i ~= execs_len then
-      local status, err
-      status, err, r, w = S.pipe()
-    end
-
-    execs[i]:set_opt({
-        stdin  = in_,
-        stdout = w
-      })()
-
-    if in_ then
-      S.close(in_)
-    end
-
-    if i ~= execs_len then
-      S.close(w)
-    end
-
-    in_ = r
-  end
-
-  return execs
-end
+local execs  = require 'lsh.pipeline.execs'
 
 -- pipeline --
 --
 -- {
---   execs -- array of exec type struct
+--   -- array of cmd type objects
 -- }
 --
 
-local _M = tablex.new(0, 7)
+local methods = tablex.new(0, 10)
+
+function methods.clone(self)
+  return tablex.clone(self, true)
+end
+
+-- return 'pipeline'
+function methods.type()
+  return 'pipeline'
+end
+
+function methods.add(self, ...)
+  -- check if first argument is cmd object
+  local len = select('#', ...)
+  if len == 1 then
+    local x = select(1, ...)
+    if not x then return nil, 'no args provided' end
+    if type(x) == 'table' and x.type and x:type() == 'cmd' then
+      table.insert(self, x:clone())
+      return self
+    end
+  end
+
+  -- construct cmd from args
+  local cmd_, err = cmd(...)
+  if err then return nil, err end
+  table.insert(self, cmd_)
+
+  return self
+end
+
+function methods.run(self)
+  return execs(self):wait()
+end
+
+function methods.exec(self)
+  return execs(self)
+end
+
+local _M = tablex.new(0, 2)
 local pipeline_mt = {
-  __index = _M,
+  __index = methods,
   __tostring = function(t)
-    local len = #t.execs
+    local len = #t
     local ret = tablex.new(len, 0)
 
     for i=1,len do
-      table.insert(ret, string.format('%s', t.execs[i]))
+      ret[i] = string.format('%s', t[i])
     end
 
-    return table.concat(ret, '\n')
+    return table.concat(ret, ' | ')
   end,
-  __call = function(t, o)
-    return t:exec(o)
+  __call = function(t)
+    return t:exec()
   end,
 }
 
 function _M.new()
-  return setmetatable({execs = {}}, pipeline_mt)
-end
-
-function _M.clone(self)
-  local execs_old = self.execs
-  assert(execs_old)
-
-  local p = _M.new()
-
-  for i=1,#execs_old do
-    p:add(execs_old[i])
-  end
-
-  return p
+  return setmetatable({}, pipeline_mt)
 end
 
 -- return 'pipeline' if input is pipeline type
-function _M.type(self)
-  if type(self) ~= 'table' then return nil end
-  if getmetatable(self) == pipeline_mt then
+function _M.type(tbl)
+  if type(tbl) ~= 'table' then return nil end
+  local is_pipeline = getmetatable(tbl) == pipeline_mt
+  if is_pipeline then
     return 'pipeline'
   end
 
   return nil
 end
 
-function _M.add(self, c, o)
-  local c_type = type(c)
-  if c_type ~= 'table' then
-    if c_type ~= 'function' then
-      error(err_str:format(1, 'new', 'table or function', c_type), 2)
-    end
-  end
-  if o and type(o) ~= 'table' then
-    error(err_str:format(2, 'new', 'table or nil', c_type), 2)
-  end
-
-  local exec_
-  if c_type == 'table' and c.type and c:type() == 'exec' then
-    exec_ = c:clone(o)
-  else -- cmd type or command table/function
-    exec_ = exec.new(c, o)
-  end
-
-  table.insert(self.execs, exec_)
-
-  return self
-end
-
-function _M.exec(self, o)
-  local exec_ = self.execs[1] -- take the first one
-  if not exec_ then return nil, 'nothing to execute' end
-  if exec_.pid then return nil, 'already executed'   end
-
-  -- TODO: handle opt
-  exec_pipeline(self.execs)
-
-  return self
-end
-
-function _M.wait(self)
-  local execs = self.execs
-  local execs_len = #execs
-  local exit_statuses = tablex.new(execs_len, 0)
-
-  for i=1,execs_len do
-    exit_statuses[i] = execs[i]:wait().exit_status
-  end
-
-  self.exit_statuses = exit_statuses
-
-  return self
-end
-
--- TODO: return nice metatable
-function _M.status(self, wait)
-  local execs = self.execs
-  local execs_len = #execs
-  local alive = false
-
-  local ret = tablex.new(execs_len, 1)
-  for i=1,execs_len do
-    local status = execs[i]:status(wait)
-    if not alive and status.alive then
-      alive = true
-    end
-    ret[i] = status
-  end
-
-  ret.alive = alive
-
-  return ret
-end
-
 local mt = {
   __index = _M,
-  __call = function(t)
+  __call = function(_)
     return _M.new()
   end,
 }
 
-return setmetatable({}, mt)
+return setmetatable(_M, mt)
