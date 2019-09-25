@@ -51,19 +51,19 @@ local function table_shallowcopy(orig)
   return copy
 end
 
-local ok, table_clone = pcall(require, 'table.clone')
-if not ok or type(table_clone) ~= 'function' then
-  table_clone = function(tbl, deep)
-    if type(tbl) ~= 'table' then
-      error(err_str:format(1, 'clone', 'table', type(tbl)), 2)
-    end
-
-    if deep then
-      return table_deepcopy(tbl)
-    end
-
-    return table_shallowcopy(tbl)
+-- todo: OpenResty table.clone extension for now doesn't
+-- support deep copy and shallow copy doesn't copy metatable
+--local ok, table_clone = pcall(require, 'table.clone')
+local table_clone = function(tbl, deep)
+  if type(tbl) ~= 'table' then
+    error(err_str:format(1, 'clone', 'table', type(tbl)), 2)
   end
+
+  if deep then
+    return table_deepcopy(tbl)
+  end
+
+  return table_shallowcopy(tbl)
 end
 
 _M.clone = table_clone
