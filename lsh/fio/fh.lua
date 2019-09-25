@@ -3,7 +3,8 @@
 local ffi = require 'ffi'
 local S   = require 'syscall'
 
-local tablex = require 'lsh.tablex'
+local tablex  = require 'lsh.tablex'
+local stringx = require 'lsh.stringx'
 
 local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
@@ -17,10 +18,17 @@ local function fh_str(fh)
   fh:seek(0)
   local res = {}
 
+  local i = 1
   while true do
     local part = fh:read()
-    if part == '' then break end
-    table.insert(res, part)
+    if part == '' then
+      if i > 1 then
+        res[i-1] = stringx.chomp(res[i-1])
+      end
+      break
+    end
+    res[i] = part
+    i = i + 1
   end
 
   return table.concat(res)
