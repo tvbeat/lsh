@@ -98,4 +98,9 @@ function _M.split(inp, sep, max)
   return string_split(inp, sep, max)
 end
 
+-- Remove any final newline from a string.
+function _M.chomp(str)
+  return str:gsub('\n$', '')
+end
+
 return _M
