@@ -103,7 +103,10 @@ local path_mt = {
   end,
   __tostring = function(t)
     return t.path
-  end
+  end,
+  __eq = function (l, r)
+    return l.path == r.path
+  end,
 }
 
 -- attrs --
