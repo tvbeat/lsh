@@ -78,8 +78,10 @@ function _M.write(self, buf, len)
 
   if buf_type == 'string' then
     len = #buf
-  elseif buf_type == 'cdata' and type(len) ~= 'number' then
-    error(err_str:format(3, 'write', 'number', type(len)), 2)
+  elseif buf_type == 'cdata' then
+    if type(len) ~= 'number' then
+      error(err_str:format(3, 'write', 'number', type(len)), 2)
+    end
   else
     error(err_str:format(2, 'write', 'string or cdata', buf_type), 2)
   end
@@ -108,14 +110,18 @@ function _M.read(self, buf, size)
     size = buf -- buf is holding size
 
     tmpbuf = rbuf -- try to reuse allocated buffer
-    if size and size > rsize then
-      -- if provided size is bigger than default allocate new buf
-      tmpbuf = buf_t(size)
+    if size then
+      if size > rsize then
+        -- if provided size is bigger than default allocate new buf
+        tmpbuf = buf_t(size)
+      end
     else
       size = rsize
     end
-  elseif buf_type == 'cdata' and type(size) ~= 'number' then
-    error(err_str:format(3, 'read', 'number', type(size)), 2)
+  elseif buf_type == 'cdata' then
+    if type(size) ~= 'number' then
+      error(err_str:format(3, 'read', 'number', type(size)), 2)
+    end
   else
     error(err_str:format(2, 'read', 'number or cdata', buf_type), 2)
   end
