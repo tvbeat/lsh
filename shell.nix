@@ -1,27 +1,27 @@
-{ pkgs ? import ./pkgs.nix
-}:
+{ pkgs ? import ./nix/pkgs.nix {}, ... }:
 
 with pkgs;
-with import ./common.nix { inherit pkgs; };
 
-stdenv.mkDerivation rec {
+let
+  common = import ./nix/common.nix { inherit pkgs; };
+  update-nixpkgs = pkgs.writeShellScriptBin "update-nixpkgs" ''
+    ${pkgs.nix-prefetch-git}/bin/nix-prefetch-git \
+      https://github.com/nixos/nixpkgs.git \
+      --rev refs/heads/master \
+      > ./nix/nixpkgs.json
+  '';
+in stdenv.mkDerivation rec {
   name = "lsh";
 
-  inherit buildInputs;
+  buildInputs = common.buildInputs ++ [ update-nixpkgs ];
 
   enableParallelBuilding = true;
 
   shellHook = ''
-    function ltest() {
+    function check() {
       luajit test/test.lua
     }
     
-    export PS1="\[\033[38;5;10m\]\u@\h[${name} nix-shell]\[$(tput sgr0)\]\[\033[38;5;15m\]:\[$(tput sgr0)\]\[\033[38;5;39m\]\w\[$(tput sgr0)\]\\$\[$(tput sgr0)\] \[$(tput sgr0)\]"
-
-    export prefix=$(pwd)
-
-    # LuaJIT
-    LUA_PATH="$LUA_PATH;$prefix/?.lua"
-
+    LUA_PATH="$LUA_PATH;$(pwd)/?.lua"
   '';
 }
