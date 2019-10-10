@@ -26,6 +26,8 @@ let
     self = luajit;
   };
 in rec {
+  inherit luajit;
+
   lsh-bin = pkgs.writeScriptBin "lsh" ''
     #!${luajit}/bin/luajit
     local sh = require 'lsh'

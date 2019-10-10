@@ -6,19 +6,43 @@ Highly experimental!
 
 See `test/test.lua` for example usage.
 
-## Install
 
-TODO: create `default.nix` and add instructions
+## Install and Use
 
+Clone this repo, cd into it, then:
 
-## Build and Test
+```
+nix-env -i .
+```
+
+Run lua scripts with wrapper:
+
+```
+lsh <script.lua>
+```
+
+## Develop
+
+Build:
+
+```
+nix-build
+```
+
+Build documentation package:
+
+```
+nix-build nix/doc.nix
+```
+
+Test:
 
 ```
 nix-shell --run check
 ```
 
 
-## Generate Documentation
+Generate Documentation in `doc/` directory:
 
 ```
 nix-shell --run doc
