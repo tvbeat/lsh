@@ -1,4 +1,6 @@
--- tablex - table extensions
+--- table extensions
+-- TODO describe how to use, see examples
+-- @module lsh.tablex
 
 local type, pairs = type, pairs
 local getmetatable, setmetatable = getmetatable, setmetatable
@@ -66,7 +68,14 @@ local table_clone = function(tbl, deep)
   return table_shallowcopy(tbl)
 end
 
-_M.clone = table_clone
+--- clone table
+-- @tparam table self table to clone
+-- @tparam ?bool deep wether to deep clone, default is no
+-- @treturn table clone of `self`
+-- @raise error when argument is not a table
+_M.clone = function(self, deep)
+  return table_clone(self, deep)
+end
 
 local ok, table_clear = pcall(require, 'table.clear')
 if not ok then
@@ -77,7 +86,13 @@ if not ok then
   end
 end
 
-_M.clear = table_clear
+--- clear table, set all keys to `nil`
+-- @tparam table self table to clear
+-- @treturn table `self`, cleared
+-- @raise error when argument is not a table
+_M.clear = function(self)
+  return table_clear(self)
+end
 
 local ok, table_pack = pcall(require, 'table.pack')
 if not ok or type(table_pack) ~= 'function' then
@@ -86,7 +101,13 @@ if not ok or type(table_pack) ~= 'function' then
   end
 end
 
-_M.pack = table_pack
+--- pack arguments into table
+-- @param ... values to put into table
+-- @treturn table with values
+-- @raise error when argument is not a table
+_M.pack = function(...)
+  return table_pack(...)
+end
 
 local ok, table_isempty = pcall(require, 'table.isempty')
 if not ok or type(table_isempty) ~= 'function' then
@@ -99,7 +120,12 @@ if not ok or type(table_isempty) ~= 'function' then
   end
 end
 
-_M.isempty = table_isempty
+--- check if table is empty
+-- @tparam table self
+-- @treturn[0] bool wether argument is a table with 0 keys
+_M.isempty = function(self)
+  return table_isempty(self)
+end
 
 local ok, table_isarray = pcall(require, 'table.isarray')
 if not ok or type(table_isarray) ~= 'function' then
@@ -119,7 +145,13 @@ if not ok or type(table_isarray) ~= 'function' then
   end
 end
 
-_M.isarray = table_isarray
+--- check wether table is an array
+-- @tparam table self
+-- @treturn bool wether argument is a table where all keys are numeric
+-- @raise error when argument is not a table
+_M.isarray = function(self)
+  return table_isarray(self)
+end
 
 local ok, table_nkeys = pcall(require, 'table.nkeys')
 if not ok or type(table_nkeys) ~= 'function' then
@@ -137,6 +169,12 @@ if not ok or type(table_nkeys) ~= 'function' then
   end
 end
 
-_M.nkeys = table_nkeys
+--- get the number of keys in a table
+-- @tparam table self
+-- @treturn int number of keys in `self`
+-- @raise error when argument is not a table
+_M.nkeys = function(self)
+  return table_nkeys(self)
+end
 
 return _M

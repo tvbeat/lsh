@@ -1,3 +1,6 @@
+--- execute pipelines
+-- @module lsh.pipeline.execs
+
 local S = require 'syscall'
 
 local exec   = require 'lsh.cmd.exec'
@@ -48,20 +51,32 @@ end
 local methods = tablex.new(0, 2)
 local attrs = tablex.new(0, 4)
 
+--- get stdin
+-- @tparam lsh.pipeline.execs execs
+-- @treturn TODO stdin of first process
 function attrs.stdin(execs)
   return execs[1]:stdin()
 end
 
+--- get stdout
+-- @tparam lsh.pipeline.execs execs
+-- @treturn TODO stdout of last process
 function attrs.stdout(execs)
   return execs[#execs]:stdout()
 end
 
+--- get stderr
+-- @tparam lsh.pipeline.execs execs
+-- @treturn TODO stderr of last process
 function attrs.stderr(execs)
   return execs[#execs]:stderr()
 end
 
--- TODO: return nice metatable
+--- get execution status
+-- @tparam lsh.pipeline.execs execs
+-- @treturn TODO TODO
 function attrs.status(execs)
+  -- TODO: return nice metatable
   local execs_len = #execs
   local alive = false
 
@@ -79,11 +94,15 @@ function attrs.status(execs)
   return ret
 end
 
--- return "execs"
+--- return `"execs"`
+-- @treturn string `"execs"`
 function methods.type()
   return 'execs'
 end
 
+--- wait for all processes to complete
+-- @tparam lsh.pipeline.execs self
+-- @treturn lsh.pipeline.execs `self` after waiting for all processes to complete
 function methods.wait(self)
   local execs_len = #self
   local exit_statuses = tablex.new(execs_len, 0)
@@ -118,6 +137,9 @@ local execs_mt = {
   end,
 }
 
+--- create new @{execs} instance from pipeline
+-- @tparam lsh.pipeline pl
+-- @treturn lsh.pipeline.execs new @{execs} instance
 function _M.new(pl)
   if type(pl) ~= 'table' or not pl.type or not pl:type() == 'pipeline' then
     error(err_str:format(1, 'new', 'pipeline object', type(pl)), 2)
@@ -129,7 +151,10 @@ function _M.new(pl)
   return setmetatable(execs, execs_mt)
 end
 
--- return "execs" if input is execs type
+--- return `"execs"` if input is @{execs} type
+-- @param tbl
+-- @treturn[0] string `"execs"` if argument is an @{execs} instance
+-- @treturn[1] nil otherwise
 function _M.type(tbl)
   if type(tbl) ~= 'table' then return nil end
   if getmetatable(tbl) == execs_mt then

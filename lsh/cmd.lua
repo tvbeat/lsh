@@ -1,7 +1,5 @@
--- cmd structure
---
--- Create and manupulate command and its options
---
+-- create and manupulate commands and arguments.
+-- @module lsh.cmd
 
 local ffi = require 'ffi'
 local S   = require 'syscall'
@@ -94,21 +92,32 @@ end
 --
 local methods = tablex.new(0, 10)
 
+--- clone cmd instance
+-- @tparam lsh.cmd self
+-- @treturn lsh.cmd new @{cmd} instance, clone of `self`
 function methods.clone(self)
   assert(self)
 
   return tablex.clone(self, true)
 end
 
+--- execute a command and wait for completion
+-- @tparam lsh.cmd self
+-- @treturn lsh.cmd `self`
 function methods.run(self)
   return exec(self):wait()
 end
 
+--- execute command
+-- @tparam lsh.cmd self
+-- @treturn lsh.cmd `self`
 function methods.exec(self)
   return exec(self)
 end
 
--- return cmd type
+--- get the type of a command
+-- @tparam lsh.cmd self
+-- @return the string `"cmd"`
 function methods.type()
   return 'cmd'
 end
@@ -121,6 +130,10 @@ local function cmd_appned(cmd, x)
   return true
 end
 
+--- append a part to a command
+-- @tparam lsh.cmd self
+-- @tparam table|string x command part to append
+-- @treturn lsh.cmd `self`
 function methods.append(self, ...)
   for i=1,select('#', ...) do
     local ok, err = cmd_appned(self, select(i, ...))
@@ -149,6 +162,11 @@ function methods.extend(self, ...)
   return self
 end
 
+--- insert a part into a command
+-- @param self @{cmd}
+-- @tparam int i position to insert at
+-- @tparam table|string x command part to insert
+-- @treturn lsh.cmd `self`
 function methods.insert(self, i, x)
   if type(i) ~= 'number' then
     error(err_str:format(2, 'insert', 'number', type(i)), 2)
@@ -160,6 +178,10 @@ function methods.insert(self, i, x)
   return self
 end
 
+--- remove a command part
+-- @param self @{cmd}
+-- @tparam int i position to remove
+-- @treturn lsh.cmd `self`
 function methods.remove(self, i)
   if type(i) ~= 'number' then
     error(err_str:format(2, 'remove', 'number', type(i)), 2)
@@ -171,6 +193,10 @@ end
 
 -- cmd options --
 
+--- set working directory
+-- @param self @{cmd}
+-- @tparam string|path wd working directory
+-- @treturn lsh.cmd `self`
 function methods.workdir(self, wd)
   if not wd or wd == '' then
     self._workdir = nil
@@ -184,6 +210,10 @@ function methods.workdir(self, wd)
   return self
 end
 
+--- set environment variables
+-- @tparam lsh.cmd self
+-- @tparam table env table of environment variables, or `nil`
+-- @treturn lsh.cmd `self`
 function methods.env(self, env)
   if not env then
     self._env = nil
@@ -198,6 +228,10 @@ function methods.env(self, env)
   return self
 end
 
+--- enable or disable glob pattern expansion (enabled by default)
+-- @tparam lsh.cmd self
+-- @tparam bool glob wether to enable glob expansion
+-- @treturn lsh.cmd `self`
 function methods.glob(self, glob)
   if type(glob) ~= 'boolean' then
     error(err_str:format(2, 'glob', 'boolean', type(glob)), 2)
@@ -208,6 +242,10 @@ function methods.glob(self, glob)
 end
 
 
+--- set stdin
+-- @param self @{cmd}
+-- @tparam lsh.path|string|lsh.fio.fh|userdata val path or string path or file handle or file descriptior
+-- @treturn lsh.cmd `self`
 function methods.stdin(self, val)
   if not val then
     self._stdin = nil
@@ -221,6 +259,10 @@ function methods.stdin(self, val)
   return self
 end
 
+--- set stdout
+-- @param self @{cmd}
+-- @tparam lsh.path|string|lsh.fio.fh|userdata val path or string path or file handle or file descriptior
+-- @treturn lsh.cmd `self`
 function methods.stdout(self, val)
   if not val then
     self._stdout = nil
@@ -234,6 +276,10 @@ function methods.stdout(self, val)
   return self
 end
 
+--- set stderr
+-- @param self @{cmd}
+-- @tparam lsh.path|string|lsh.fio.fh|userdata val path or string path or file handle or file descriptior
+-- @treturn lsh.cmd `self`
 function methods.stderr(self, val)
   if not val then
     self._stderr = nil
@@ -255,7 +301,9 @@ local cmd_mt = {
   end,
 }
 
--- create new cmd instance and normalize input
+--- create new cmd instance and normalize input
+-- @tparam string|number|lsh.path|cdata ... arguments
+-- @treturn lsh.cmd new @{cmd} instance
 function _M.new(...)
   local len = select('#', ...)
   if len <= 0 then return nil, 'no args' end
@@ -277,7 +325,10 @@ function _M.new(...)
   return setmetatable(cmd, cmd_mt)
 end
 
--- return 'cmd' if input is cmd type
+--- return "cmd" if input is of cmd type
+-- @tparam table tbl value to check
+-- @treturn[0] string `"cmd"` if argument is a @{cmd}
+-- @treturn[1] nil otherwise
 function _M.type(tbl)
   if type(tbl) ~= 'table' then return nil end
   local is_cmd = getmetatable(tbl) == cmd_mt

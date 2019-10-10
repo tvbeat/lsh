@@ -1,3 +1,6 @@
+--- command pipeline
+-- @module lsh.pipeline
+
 local S = require 'syscall'
 
 local cmd    = require 'lsh.cmd'
@@ -13,15 +16,23 @@ local execs  = require 'lsh.pipeline.execs'
 
 local methods = tablex.new(0, 10)
 
+--- clone
+-- @tparam lsh.pipeline self
+-- @treturn lsh.pipeline new @{pipeline} instance, clone of `self`
 function methods.clone(self)
   return tablex.clone(self, true)
 end
 
--- return 'pipeline'
+--- return `"pipeline"`
+-- @treturn string `"pipeline"`
 function methods.type()
   return 'pipeline'
 end
 
+--- add command to pipeline
+-- @tparam lsh.pipeline self
+-- @param ... @(lsh.cmd) or arguments to @(lsh.cmd) TODO
+-- @treturn lsh.pipeline `self` with added stage
 function methods.add(self, ...)
   -- check if first argument is cmd object
   local len = select('#', ...)
@@ -42,10 +53,16 @@ function methods.add(self, ...)
   return self
 end
 
+-- run the pipeline (`exec` and `wait`)
+-- @tparam lsh.pipeline self
+-- @treturn lsh.pipeline.execs TODO
 function methods.run(self)
   return execs(self):wait()
 end
 
+-- start executing the pipeline. you need to @{wait} for it to finish to get the result
+-- @tparam lsh.pipeline self
+-- @treturn lsh.pipeline.execs TODO
 function methods.exec(self)
   return execs(self)
 end
@@ -68,11 +85,16 @@ local pipeline_mt = {
   end,
 }
 
+-- create new ${pipeline} instance
+-- @treturn lsh.pipeline new @{pipeline} instance
 function _M.new()
   return setmetatable({}, pipeline_mt)
 end
 
--- return 'pipeline' if input is pipeline type
+--- return `"pipeline"` if input is of @{pipeline} type
+-- @param tbl
+-- @treturn[0] string `"pipeline"` if the argument is a @{pipeline}
+-- @treturn[1] nil otherwise
 function _M.type(tbl)
   if type(tbl) ~= 'table' then return nil end
   local is_pipeline = getmetatable(tbl) == pipeline_mt
