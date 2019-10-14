@@ -113,10 +113,38 @@ function methods.type()
   return 'cmd'
 end
 
-function methods.append(self, x)
+local function cmd_appned(cmd, x)
   local cpart, err = cpart_norm(x)
-  if not cpart then error(err, 2) end
-  table.insert(self, cpart)
+  if not cpart then return nil, err end
+  table.insert(cmd, cpart)
+
+  return true
+end
+
+function methods.append(self, ...)
+  for i=1,select('#', ...) do
+    local ok, err = cmd_appned(self, select(i, ...))
+    if not ok then
+      return nil, ("invalid arg %d: %s"):format(i, err)
+    end
+  end
+
+  return self
+end
+
+function methods.extend(self, ...)
+  for i=1,select('#', ...) do
+    local tbl = select(i, ...)
+    if type(tbl) ~= 'table' then
+      return nil, ("arg %d must be table"):format(i)
+    end
+    for j=1,#tbl do
+      local ok, err = cmd_appned(self, tbl[j])
+      if not ok then
+        return nil, ("invalid arg %d, index %d: %s"):format(i, j, err)
+      end
+    end
+  end
 
   return self
 end
@@ -126,7 +154,7 @@ function methods.insert(self, i, x)
     error(err_str:format(2, 'insert', 'number', type(i)), 2)
   end
   local cpart, err = cpart_norm(x)
-  if not cpart then error(err, 2) end
+  if not cpart then return nil, err end
   table.insert(self, i, cpart)
 
   return self

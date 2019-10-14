@@ -1,5 +1,4 @@
 local sh = require 'lsh'
-local tablex = require 'lsh.tablex'
 
 --
 print "-- cmd clone --"
@@ -13,9 +12,21 @@ do
   assert(tostring(cmd) == tostring(cmd2))
 end
 
+--
+print "-- cmd manipulation --"
+--
 
-local c = {'echo', 1}
-local o = {workdir = '/tmp', stdout = '/dev/null'}
+do
+  local cmd = sh.cmd('echo')
+  cmd:append('1', sh.path('/tmp'))
+  assert(tostring(cmd) == 'echo 1 /tmp')
+  cmd:remove(3)
+  assert(tostring(cmd) == 'echo 1')
+  cmd:extend({2, 3}, {5})
+  assert(tostring(cmd) == 'echo 1 2 3 5')
+  cmd:insert(5, 4)
+  assert(tostring(cmd) == 'echo 1 2 3 4 5')
+end
 
 --
 print "-- exec simple --"
