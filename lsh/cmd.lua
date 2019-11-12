@@ -1,202 +1,267 @@
--- create and manupulate commands and arguments.
--- @module lsh.cmd
+--[[- A process builder, providing fine-grained control over
+how a new process should be spawned.
 
-local ffi = require 'ffi'
-local S   = require 'syscall'
+A default configuration can be generated using `cmd.new(program)`,
+where program gives a path to the program to be executed. Additional
+builder methods allow the configuration to be changed (for example,
+by adding arguments) prior to spawning:
+```lua
+local cmd = require 'lsh.cmd'
 
-local tablex = require 'lsh.tablex'
-local path   = require 'lsh.path'
+local output, err = cmd.new('sh'):arg('-c')
+                                 :arg('echo hello')
+                                 :output()
+if err then error('failed to execute process') end
 
-local exec   = require 'lsh.cmd.exec'
+local hello = tostring(output.stdout)
+```
 
-local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
+Command can be reused to spawn multiple processes. The builder
+methods change the command without needing to immediately
+spawn the process.
+```lua
+local cmd = require 'lsh.cmd'
 
-ffi.cdef [[
-int fileno(struct FILE* stream);
+local echo_hello = cmd.new('sh')
+echo_hello:arg('-c')
+          :arg('echo hello')
+
+local hello_1, err = echo_hello:output()
+if err then error('failed to execute process') end
+
+local hello_2, err = echo_hello:output()
+if err then error('failed to execute process') end
+```
+
+Similarly, you can call builder methods after spawning a process
+and then spawn a new process with the modified settings.
+```lua
+local cmd = require 'lsh.cmd'
+
+local list_dir = cmd.new('ls')
+
+-- Execute `ls` in the current directory of the program.
+local status, err = list_dir:run()
+if err then error('failed to execute process') end
+
+-- Change `ls` to execute in the root directory.
+list_dir:workdir('/')
+
+-- And then execute `ls` again but in the root directory.
+local status, err = list_dir:run()
+if err then error('failed to execute process') end
+```
+
+Commands can be easily chained into @{pipeline}s by using
+slash (**/**) symbol.
+```lua
+local cmd = require 'sh.cmd'
+
+local ls = sh.cmd('ls'):workdir('/')
+local tail = sh.cmd('tail')
+
+local pl = ls / tail:arg('-n1')
+local status, err = pl:run()
+if err then error('failed to execute pipeline processes') end
+```
+
+@module lsh.cmd
 ]]
 
-local C = ffi.C
 
-local function cpart_norm(cpart)
-  local cpart_type = type(cpart)
+local tablex   = require 'lsh.tablex'
+local path     = require 'lsh.path'
+local pipeline = require 'lsh.pipeline'
+local memfd    = require 'lsh.memfd'
 
-  if     cpart_type == 'string' then
-    return cpart
-  elseif cpart_type == 'number' then
-    return tostring(cpart)
-  elseif cpart_type == 'table' then
-    local res, err
-    -- TODO: native path support
-    if cpart.type and cpart:type() == 'path' then
-      return tostring(cpart)
-    end
+local child   = require 'lsh.cmd.child'
 
-    return table.concat(cpart, ' ')
-  elseif cpart_type == 'cdata' then
-    local res = tostring(cpart) -- try to convert to string (ffi.string ?)
-    if not res then
-      return nil, 'unable to convert '..cpart_type..' to string'
-    end
+local norm_arg   = require('lsh.cmd.utils').norm_arg
+local norm_stdfd = require('lsh.cmd.utils').norm_stdfd
 
-    return res
-  end
-
-  return nil, 'invalid type '..cpart_type
-end
-
-local stdfd_obj_types = {
-  memfd = true,
-  fh =    true,
-  path =  true,
-}
-
-local function norm_stdfd(x)
-  local x_type = type(x)
-
-  if x_type == 'string' then -- path to file
-    local p, err = path.new(x)
-    if err then return nil, err end
-    return p
-  elseif x_type == 'table' then -- path/fh/memfd
-    local obj_type = x.type and x:type()
-    if not stdfd_obj_types[obj_type] then
-      return nil, "table must be path/memfd/fh type"
-    end
-    -- TODO: check fh/memfd permissions
-    return x
-  elseif x_type == 'userdata' then -- lua file handle?
-    -- allow only standard fds (0, 1, 2)
-    local fd = tonumber(C.fileno(x))
-    if fd == 0 then
-      return nil, ("ambiguous redirect to fd %d"):format(fd)
-    elseif fd == 1 then
-      return S.stdout
-    elseif fd == 2 then
-      return S.stderr
-    end
-    return nil, ("invalid userdata fd %d"):format(fd)
-  elseif x_type == 'cdata' then -- ljsyscall fd struct
-    -- TODO: checks
-    return x
-  end
-
-  return nil, ("invalid type %s"):format(x_type)
-end
+local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
+local err_tbl_str = "bad argument #%d at index #%d to '%s' (%s expected, got %s)"
 
 -- cmd --
 --
 -- {
---   -- array of command and args
---   -- map part of table for options
+--   _program -- program name or path
+--   _args    -- array of program arguments
 -- }
 --
-local methods = tablex.new(0, 10)
 
---- clone cmd instance
--- @tparam lsh.cmd self
--- @treturn lsh.cmd new @{cmd} instance, clone of `self`
-function methods.clone(self)
-  assert(self)
+--- Cmd methods.
+-- @section cmd
+local methods = tablex.new(0, 14)
 
-  return tablex.clone(self, true)
-end
+--[[- Returns the type of a object.
+@function type
+@tparam lsh.cmd self
+@return the string `"cmd"`
+@usage
+local sh = require 'lsh'
 
---- execute a command and wait for completion
--- @tparam lsh.cmd self
--- @treturn lsh.cmd `self`
-function methods.run(self)
-  return exec(self):wait()
-end
-
---- execute command
--- @tparam lsh.cmd self
--- @treturn lsh.cmd `self`
-function methods.exec(self)
-  return exec(self)
-end
-
---- get the type of a command
--- @tparam lsh.cmd self
--- @return the string `"cmd"`
+assert(sh.cmd('ls'):type() == 'cmd')
+]]
 function methods.type()
   return 'cmd'
 end
 
-local function cmd_appned(cmd, x)
-  local cpart, err = cpart_norm(x)
-  if not cpart then return nil, err end
-  table.insert(cmd, cpart)
+--[[- Clones cmd instance.
+@function clone
+@tparam lsh.cmd self
+@treturn lsh.cmd new @{cmd} instance, clone of `self`
+@usage
+local sh = require 'lsh'
 
-  return true
+local c1 = sh.cmd('ls')
+local c2 = c1:clone()
+]]
+function methods.clone(self)
+  return tablex.clone(self, true)
 end
 
---- append a part to a command
--- @tparam lsh.cmd self
--- @tparam table|string x command part to append
--- @treturn lsh.cmd `self`
-function methods.append(self, ...)
-  for i=1,select('#', ...) do
-    local ok, err = cmd_appned(self, select(i, ...))
-    if not ok then
-      return nil, ("invalid arg %d: %s"):format(i, err)
+--[[- Executes a command as a child process,
+waiting for it to finish and collecting its exit status.
+
+By default, stdin, stdout and stderr are inherited from the parent.
+
+@function run
+@tparam lsh.cmd self
+@treturn lsh.cmd.status @{cmd.status}
+@usage
+local sh = require 'lsh'
+
+local status = sh.cmd('ls'):run()
+]]
+function methods.run(self)
+  return child.new(self):wait()
+end
+
+--[[- Executes the command as a child process, returning a handle to it.
+
+By default, stdin, stdout and stderr are inherited from the parent.
+
+@function spawn
+@tparam lsh.cmd self
+@treturn lsh.cmd.child `child`
+@usage
+local sh = require 'lsh'
+
+local child = sh.cmd('ls'):spawn()
+local status = child:wait()
+]]
+function methods.spawn(self)
+  return child.new(self)
+end
+
+--[[- Executes the command as a child process, waiting for
+it to finish and collecting all of its output.
+
+By default, stdout and stderr are captured using `memfd` (and used
+to provide the resulting output)
+
+@function output
+@tparam lsh.cmd self
+@treturn lsh.cmd.child.output @{cmd.child.output}
+@usage
+local sh = require 'lsh'
+
+local output, err = sh.cmd('cat'):arg('file.txt')
+                                 :output()
+if not output then error(err) end
+print(("status: %s", output.status)
+for line in output.stdout:lines() do
+  io.stdout:write(line)
+end
+for line in output.stderr:lines() do
+  io.stderr:write(line)
+end
+
+assert(output.status:success())
+]]
+function methods.output(self)
+  local _cmd = self:clone()
+  if not _cmd._stdout then
+    _cmd:stdout(memfd.new())
+  end
+  if not _cmd._stderr then
+    _cmd:stderr(memfd.new())
+  end
+
+  return child.new(_cmd, false):wait_with_output()
+end
+
+--[[- Adds an argument to pass to the program.
+
+Only one argument can be passed per use.
+
+To pass multiple arguments see `args`.
+
+@function arg
+@tparam lsh.cmd self
+@tparam string|number|lsh.path arg program argument
+@treturn lsh.cmd `self`
+@usage
+local sh = require 'lsh'
+
+sh.cmd('ls'):arg('-a')
+            :run()
+]]
+function methods.arg(self, arg)
+  local res = norm_arg(arg)
+  if not res then
+    error(err_str:format(2, 'arg',
+      'string or number or lsh.path',
+      type(arg)), 2)
+  end
+  table.insert(self._args, res)
+
+  return self
+end
+
+--[[- Adds multiple arguments to pass to the program.
+
+To pass a single argument see `arg`.
+
+@function args
+@tparam lsh.cmd self
+@tparam table args array of program arguments
+@treturn lsh.cmd `self`
+@usage
+local sh = require 'lsh'
+
+sh.cmd('ls'):args({'-a', '-l'})
+            :run()
+]]
+function methods.args(self, args)
+  if type(args) ~= 'table' then
+    error(err_str:format(2, 'args', 'table', type(arg)), 2)
+  end
+  for i=1,#args do
+    local arg = norm_arg(args[i])
+    if not arg then
+      error(err_tbl_str:format(2, i, 'args',
+        'string or number or lsh.path',
+        type(args[i]), 2))
     end
+    table.insert(self._args, arg)
   end
 
   return self
 end
 
-function methods.extend(self, ...)
-  for i=1,select('#', ...) do
-    local tbl = select(i, ...)
-    if type(tbl) ~= 'table' then
-      return nil, ("arg %d must be table"):format(i)
-    end
-    for j=1,#tbl do
-      local ok, err = cmd_appned(self, tbl[j])
-      if not ok then
-        return nil, ("invalid arg %d, index %d: %s"):format(i, j, err)
-      end
-    end
-  end
+--[[- Sets or updates the working directory for the child process.
+@function workdir
+@tparam lsh.cmd self
+@tparam string|lsh.path wd working directory
+@treturn lsh.cmd `self`
+@usage
+local sh = require 'lsh'
 
-  return self
-end
-
---- insert a part into a command
--- @param self @{cmd}
--- @tparam int i position to insert at
--- @tparam table|string x command part to insert
--- @treturn lsh.cmd `self`
-function methods.insert(self, i, x)
-  if type(i) ~= 'number' then
-    error(err_str:format(2, 'insert', 'number', type(i)), 2)
-  end
-  local cpart, err = cpart_norm(x)
-  if not cpart then return nil, err end
-  table.insert(self, i, cpart)
-
-  return self
-end
-
---- remove a command part
--- @param self @{cmd}
--- @tparam int i position to remove
--- @treturn lsh.cmd `self`
-function methods.remove(self, i)
-  if type(i) ~= 'number' then
-    error(err_str:format(2, 'remove', 'number', type(i)), 2)
-  end
-  table.remove(self, i)
-
-  return self
-end
-
--- cmd options --
-
---- set working directory
--- @param self @{cmd}
--- @tparam string|path wd working directory
--- @treturn lsh.cmd `self`
+sh.cmd('ls'):workdir('/bin')
+            :run()
+]]
 function methods.workdir(self, wd)
   if not wd or wd == '' then
     self._workdir = nil
@@ -210,42 +275,70 @@ function methods.workdir(self, wd)
   return self
 end
 
---- set environment variables
--- @tparam lsh.cmd self
--- @tparam table env table of environment variables, or `nil`
--- @treturn lsh.cmd `self`
-function methods.env(self, env)
-  if not env then
-    self._env = nil
-    return self
-  end
+--[[- Adds or updates multiple environment variable mappings.
+@function env
+@tparam lsh.cmd self
+@tparam table envs env/value pairs of environment variables
+@treturn lsh.cmd `self`
+@usage
+local sh = require 'lsh'
 
-  if type(env) ~= 'table' then
-    error(err_str:format(2, 'env', 'table or nil', type(env)), 2)
+sh.cmd('ls'):env({PATH = '/bin'})
+            :run()
+]]
+function methods.env(self, envs)
+  if type(envs) ~= 'table' then
+    error(err_str:format(2, 'env', 'table', type(envs)), 2)
   end
-  self._env = tablex.clone(env)
+  for env, val in pairs(envs) do
+    self._envs[env] = tostring(val)
+  end
 
   return self
 end
 
---- enable or disable glob pattern expansion (enabled by default)
--- @tparam lsh.cmd self
--- @tparam bool glob wether to enable glob expansion
--- @treturn lsh.cmd `self`
-function methods.glob(self, glob)
-  if type(glob) ~= 'boolean' then
-    error(err_str:format(2, 'glob', 'boolean', type(glob)), 2)
-  end
-  self._glob = glob
+--[[- Removes an environment variable mapping.
+@function env_remove
+@tparam lsh.cmd self
+@tparam string env environment variable
+@treturn lsh.cmd `self`
+@usage
+local sh = require 'lsh'
 
-  return self
+sh.cmd('ls'):env_remove('PATH')
+            :run()
+]]
+function methods.env_remove(self, env)
+  error('not implemented')
 end
 
+--[[- Clears the entire environment map for the child process.
+@function env_clear
+@tparam lsh.cmd self
+@treturn lsh.cmd `self`
+@usage
+local sh = require 'lsh'
 
---- set stdin
--- @param self @{cmd}
--- @tparam lsh.path|string|lsh.fio.fh|userdata val path or string path or file handle or file descriptior
--- @treturn lsh.cmd `self`
+sh.cmd('ls'):env_clear()
+            :run()
+]]
+function methods.env_clear(self)
+  error('not implemented')
+end
+
+--[[- Sets or unsets the child process's standard
+input (stdin) handle.
+@function stdin
+@param self @{cmd}
+@tparam[opt] string|userdata|lsh.fio.fh|lsh.path val handle
+value
+@treturn lsh.cmd `self`
+@usage
+local sh = require 'lsh'
+
+sh.cmd('tail'):stdin('/path/to/file')
+              :run()
+]]
 function methods.stdin(self, val)
   if not val then
     self._stdin = nil
@@ -253,16 +346,25 @@ function methods.stdin(self, val)
   end
 
   local res, err = norm_stdfd(val)
-  if err then return nil, err end
+  if err then error(err, 2) end
   self._stdin = res
 
   return self
 end
 
---- set stdout
--- @param self @{cmd}
--- @tparam lsh.path|string|lsh.fio.fh|userdata val path or string path or file handle or file descriptior
--- @treturn lsh.cmd `self`
+--[[- Sets or unsets the child process's standard
+output (stdout) handle.
+@function stdout
+@param self @{cmd}
+@tparam[opt] string|userdata|lsh.fio.fh|lsh.path val handle
+value
+@treturn lsh.cmd `self`
+@usage
+local sh = require 'lsh'
+
+sh.cmd('echo', 1):stdout('/dev/null')
+                 :run()
+]]
 function methods.stdout(self, val)
   if not val then
     self._stdout = nil
@@ -270,16 +372,25 @@ function methods.stdout(self, val)
   end
 
   local res, err = norm_stdfd(val)
-  if err then return nil, err end
+  if err then error(err, 2) end
   self._stdout = res
 
   return self
 end
 
---- set stderr
--- @param self @{cmd}
--- @tparam lsh.path|string|lsh.fio.fh|userdata val path or string path or file handle or file descriptior
--- @treturn lsh.cmd `self`
+--[[- Sets or unsets the child process's standard
+error (stderr) handle.
+@function stderr
+@param self @{cmd}
+@tparam[opt] string|userdata|lsh.fio.fh|lsh.path val handle
+value
+@treturn lsh.cmd `self`
+@usage
+local sh = require 'lsh'
+
+sh.cmd('echo', 1):stderr(io.stdout)
+                 :run()
+]]
 function methods.stderr(self, val)
   if not val then
     self._stderr = nil
@@ -287,61 +398,109 @@ function methods.stderr(self, val)
   end
 
   local res, err = norm_stdfd(val)
-  if err then return nil, err end
+  if err then error(err, 2) end
   self._stderr = res
 
   return self
 end
 
-local _M = tablex.new(0, 2)
 local cmd_mt = {
   __index = methods,
   __tostring = function(t)
-    return table.concat(t, ' ')
+    local args_len = #t._args
+    local res = tablex.new(args_len + 1, 0)
+    table.insert(res, t._program)
+    for i=1,args_len do
+      table.insert(res, tostring(t._args[i]))
+    end
+
+    return table.concat(res, ' ')
+  end,
+   --[[- Construct pipeline between two @{cmd} instances.
+   @function __div
+   @tparam lsh.cmd l left @{cmd}
+   @tparam lsh.cmd r righ @{cmd}
+   @treturn lsh.pipeline new @{pipeline} instance
+   @usage
+   local sh = require 'lsh'
+
+   local p = sh.cmd('ls') /
+             sh.cmd('rev')
+   p:run()
+   ]]
+  __div = function(l, r)
+    assert(l:type() == 'cmd')
+    assert(r:type() == 'cmd')
+    return pipeline():add(l):add(r)
   end,
 }
 
---- create new cmd instance and normalize input
--- @tparam string|number|lsh.path|cdata ... arguments
--- @treturn lsh.cmd new @{cmd} instance
-function _M.new(...)
-  local len = select('#', ...)
-  if len <= 0 then return nil, 'no args' end
+--- Functions
+-- @section functions
+local _M = tablex.new(0, 1)
 
-  local cmd = tablex.new(len, 1)
-  for i=1,len do
-    local cpart = select(i, ...)
-    if cpart then
-      local res, err = cpart_norm(cpart)
-      -- todo: better error handling
-      if not res then return nil, err end
-      table.insert(cmd, res)
+--[[- Constructs a new @{cmd} for launching the `program`
+with optionial arguments.
+
+Following default configuration will be used:
+
+- inherit the current process's environment
+- inherit the current process's working directory
+- inherit stdin/stdout/stderr
+
+If program is not an absolute path, the `PATH` will be searched in an OS-defined way.
+
+@function new
+@tparam string program program name or path to program
+@tparam[opt] string|number|lsh.path ... program arguments
+@treturn lsh.cmd new @{cmd} instance
+@usage
+local sh = require 'lsh'
+
+sh.cmd.new('echo', 1):run()
+]]
+function _M.new(program, ...)
+  if type(program) ~= 'string' then
+    error(err_str:format(1, 'new', 'string', type(program)), 2)
+  end
+  local args_len = select('#', ...)
+  local cmd = {
+    _program = program,
+    _args = tablex.new(args_len, 0),
+    _envs = {},
+  }
+
+  -- optional args
+  for i=1,args_len do
+    local arg = select(i, ...)
+    if arg then
+      local res = norm_arg(arg)
+      if not res then
+        error(err_str:format(i+1, 'new',
+          'string or number or lsh.path',
+          type(arg)), 2)
+      end
+      table.insert(cmd._args, res)
     end
   end
-
-  -- glob by default
-  cmd._glob = true
 
   return setmetatable(cmd, cmd_mt)
 end
 
---- return "cmd" if input is of cmd type
--- @tparam table tbl value to check
--- @treturn[0] string `"cmd"` if argument is a @{cmd}
--- @treturn[1] nil otherwise
-function _M.type(tbl)
-  if type(tbl) ~= 'table' then return nil end
-  local is_cmd = getmetatable(tbl) == cmd_mt
-  if is_cmd then
-    return 'cmd'
-  end
-
-  return nil
-end
-
 local mt = {
-  __call = function(_, ...)
-    return _M.new(...)
+  --[[- Shorthand for `new`.
+  @function __call
+  @tparam table _M module table
+  @tparam string program program name or path to program
+  @tparam[opt] string|number|lsh.path ... program arguments
+  @treturn lsh.cmd new @{cmd} instance
+  @usage
+  local sh = require 'lsh'
+
+  sh.cmd('echo', 1):run()
+  ]]
+  __call = function(_M, program, ...)
+    return _M.new(program, ...)
   end,
 }
 
