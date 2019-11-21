@@ -1,4 +1,5 @@
--- stringx - extended string module
+--- string extensions
+-- @module lsh.stringx
 
 local ffi = require 'ffi'
 
@@ -78,8 +79,13 @@ end
 
 local _M = tablex.new(0, 1)
 
--- based on tarantool (2.1): src/lua/string.lua
+--- split string by separator
+-- @tparam string inp input string
+-- @tparam[opt] string sep separator, default is whitespace
+-- @tparam[opt] int max maximum number of  pieces to split into, default is unlimited
+-- @treturn array-of-string the pieces between separtors
 function _M.split(inp, sep, max)
+  -- based on tarantool (2.1): src/lua/string.lua
   if type(inp) ~= 'string' then
     error(err_str:format(1, 'split', 'string', type(inp)), 2)
   end

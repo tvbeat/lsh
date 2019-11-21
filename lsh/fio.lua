@@ -1,4 +1,5 @@
--- fio - file input/output
+--- file input/output
+-- @module lsh.fio
 
 local S = require 'syscall'
 
@@ -9,6 +10,13 @@ local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
 local _M = tablex.new(0, 1)
 
+--- open file
+-- @tparam string path path to file
+-- @param flags TODO
+-- @param mode TODO
+-- @treturn[0] lsh.fio.fh file handle
+-- @treturn[1] nil
+-- @treturn[1] string error
 function _M.open(path, flags, mode)
   if type(path) ~= 'string' then
     error(err_str:format(1, 'open', 'string', type(path)), 2)

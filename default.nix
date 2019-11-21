@@ -12,6 +12,13 @@ in stdenv.mkDerivation rec {
   nativeBuildInputs = [ makeWrapper ];
   buildInputs = common.buildInputs ++ [ common.lsh-bin ];
 
+  # todo: fix tests to not use file system
+  # doCheck = true;
+
+  checkPhase = ''
+    LUA_PATH="$LUA_PATH;$(pwd)/?.lua" luajit test/test.lua
+  '';
+
   installPhase = ''
     mkdir -p $out/share/lua/${luajit.luaversion}
     cp -r lsh $out/share/lua/${luajit.luaversion}/

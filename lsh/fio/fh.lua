@@ -1,4 +1,5 @@
--- fio.fh - file handle
+--- file handle
+-- @module lsh.fio.fh
 
 local ffi = require 'ffi'
 local S   = require 'syscall'
@@ -42,6 +43,9 @@ local fh_mt = {
   end,
 }
 
+--- create a new file descriptor instance
+-- @param fd TODO
+-- @treturn lsh.fio.fh
 function _M.new(fd)
   -- TODO: proper check, convert lua file handle
   if type(fd) ~= 'cdata' then
@@ -51,7 +55,10 @@ function _M.new(fd)
   return setmetatable({fd = fd}, fh_mt)
 end
 
--- return 'fh' if input is fh type
+--- return `"fh"` if input is @{fh} type
+-- @param self
+-- @treturn[0] string `"fh"` if argument is a file handle
+-- @treturn[1] `nil` otherwise
 function _M.type(self)
   if type(self) ~= 'table' then return nil end
   if getmetatable(self) == fh_mt then
@@ -61,6 +68,11 @@ function _M.type(self)
   return nil
 end
 
+--- close file handle
+-- @tparam lsh.fio.fh self
+-- @treturn[0] bool `true`
+-- @treturn[1] nil
+-- @treturn[1] string error
 function _M.close(self)
   local ok, err = self.fd:close()
   if err then
@@ -70,8 +82,11 @@ function _M.close(self)
   return ok
 end
 
--- write(str)
--- write(buf, len)
+--- write to file handle
+-- @tparam lsh.fio.fh self
+-- @param buf TODO
+-- @param len TODO
+-- @return TODO
 function _M.write(self, buf, len)
   local offset = self.offset or offset_t(0)
   local buf_type = type(buf)
@@ -99,9 +114,15 @@ end
 local rsize = 4096 -- size of default read buffer
 local rbuf = buf_t(rsize)
 
--- read(size) -> str
--- read(buf, size) -> len
+--- read from file handle, return data or put in buffer, depending on arguments TODO
+-- @tparam lsh.fio.fh self
+-- @tparam int|string buf maximum number of bytes to read and return (second argument should not be given), or buffer to return data in (second argument should be given)
+-- @tparam[opt] int size maximum number of bytes to return in `buf`. first argument must be buffer.
+-- @treturn[0] string the data that was read, if given only a size in the first argument
+-- @treturn[1] int the number of bytes read into `buf`, if both arguments were given
 function _M.read(self, buf, size)
+  -- read(size) -> str
+  -- read(buf, size) -> len
   local offset = self.offset or offset_t(0)
   local buf_type = type(buf)
   local tmpbuf
@@ -140,8 +161,12 @@ function _M.read(self, buf, size)
   return res
 end
 
--- TODO
+--- seek to position
+-- @tparam lsh.fio.fh self
+-- @tparam int position
+-- @treturn int TODO
 function _M.seek(self, position)
+  -- TODO
   if type(position) ~= 'number' then
     error(err_str:format(2, 'seek', 'number', type(position)), 2)
   end
@@ -151,16 +176,17 @@ function _M.seek(self, position)
   return tonumber(self.offset)
 end
 
--- read line by line, similar to io.lines
---
--- TODO:
---  * implementation is portable and simple to understand
---    but very slow, options are to move pointer arithmetic
---    to plain C or ditch mmap completely
---  * in !GC64 mode we should find address for mmap outside
---    of lower 4G to not mess with LuaJIT allocations
---  * optional delimiter flag
+--- read line by line, similar to io.lines
+-- @tparam lsh.fio.fh self
+-- @treturn iterator TODO
 function _M.lines(self)
+  -- TODO:
+  --  * implementation is portable and simple to understand
+  --    but very slow, options are to move pointer arithmetic
+  --    to plain C or ditch mmap completely
+  --  * in !GC64 mode we should find address for mmap outside
+  --    of lower 4G to not mess with LuaJIT allocations
+  --  * optional delimiter flag
   local nl = string.byte('\n')
   local cr = string.byte('\r')
 
@@ -230,6 +256,9 @@ function _M.lines(self)
   end
 end
 
+--- get system file descriptor
+-- @tparam lsh.fio.fh self
+-- @return TODO
 function _M.getfd(self)
   return self.fd:getfd()
 end
