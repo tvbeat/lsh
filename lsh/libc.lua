@@ -80,24 +80,37 @@ local glob_ret_codes = setmetatable({
   [4] = "GLOB_NOSYS",
 }, {__index = "UNKNOWN_ERROR"})
 
+local glob_errors = {}
 local function glob_callback(path, eerrno)
-  io.stderr:write(("glob error: %s %s"):format(path, eerrno))
+  glob_errors[ffi.string(path)] = ffi_error(eerrno)
+  return 0
 end
 local glob_callback_c = ffi.cast("int (*)(const char *, int)", glob_callback)
 
---- glob
--- @tparam string str TODO
--- @return TODO
-function _M.glob(str)
-  if type(str) ~= 'string' then
-    return nil, 'not a string'
+--[[- Glob the given path with pattern.
+@function glob
+@tparam string ppattern path pattern to match
+@treturn[1] {string,...} array of paths instances
+@treturn[1] table map of path keys and err string values (if any)
+@treturn[2] nil
+@treturn[2] string error message
+]]
+function _M.glob(ppattern)
+  if type(ppattern) ~= 'string' then
+    return nil, 'pattern must be string'
   end
 
-  local results = ffi.new('glob_t[1]')
-  local ret = C.glob(str, 0, glob_callback_c, results)
+  local results = glob_t()
+  tablex.clear(glob_errors)
+  local ret = C.glob(ppattern, 0, glob_callback_c, results)
   if ret ~= 0 then
     C.globfree(results)
-    return nil, glob_ret_codes[ret]
+    local err = glob_ret_codes[ret]
+    if err == 'GLOB_NOMATCH' then
+      return {}
+    end
+
+    return nil, err
   end
 
   local len = tonumber(results[0].gl_pathc)
@@ -108,7 +121,12 @@ function _M.glob(str)
 
   C.globfree(results)
 
-  return res
+  local err_map
+  if tablex.nkeys(glob_errors) > 0 then
+    err_map = tablex.clone(glob_errors)
+  end
+
+  return res, err_map
 end
 
 return _M

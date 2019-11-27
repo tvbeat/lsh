@@ -4,8 +4,9 @@
 local ffi = require 'ffi'
 local S = require 'syscall'
 
-local fio    = require 'lsh.fio'
 local tablex = require 'lsh.tablex'
+local fio    = require 'lsh.fio'
+local libc   = require 'lsh.libc'
 
 local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
@@ -291,6 +292,52 @@ function methods.exists(self)
   end
 
   return false
+end
+
+--[[- Glob the given relative pattern in the directory represented
+by this path, yielding all matching files (of any kind).
+
+@function glob
+@todo recursive globbing
+@tparam lsh.path self
+@tparam string pattern pattern to match
+@treturn[1] {lsh.path,...} array of `path` instances
+@treturn[1] table map of path keys and err string values (if any)
+@treturn[2] nil
+@treturn[2] string error message
+@usage
+local sh = require 'lsh'
+
+sh.path('.'):glob('*.lua')
+
+local res, err = sh.path('/'):glob('*/*')
+assert(type(res) = 'table')
+if err then
+  for k,v in pairs(err) do print(k,v) end
+end
+--> /root	Permission denied
+]]
+function methods.glob(self, pattern)
+  if type(pattern) ~= 'string' then
+    error(err_str:format(2, 'glob', 'string', type(pattern)), 2)
+  end
+  if not self:isdir() then
+    return nil, 'path must be directory'
+  end
+
+  local ppattern = ("%s/%s"):format(self, pattern)
+  local paths, err = libc.glob(ppattern)
+  if not paths then
+    return nil, err
+  end
+
+  local len = #paths
+  local res = tablex.new(len, 0)
+  for i=1,len do
+    res[i] = methods.new(paths[i])
+  end
+
+  return res, err
 end
 
 --- get metadata
