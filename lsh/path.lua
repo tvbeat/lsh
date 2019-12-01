@@ -1,5 +1,6 @@
---- create and manipulate filesystem paths
--- @module lsh.path
+--[[- Create and manipulate filesystem paths.
+@module lsh.path
+]]
 
 local ffi = require 'ffi'
 local S = require 'syscall'
@@ -89,46 +90,57 @@ local function join(...)
   return norm_path(path)
 end
 
-local methods = tablex.new(0, 25)
+local _M = tablex.new(0, 3)
+
+--- Path attributes.
+-- @section pathattr
 local attrs = tablex.new(0, 8)
 
-local path_mt = {
-  __index = function (t, k)
-    if attrs[k] then
-      return attrs[k](t)
-    end
+--[[- A string representing the final path component.
+@function name
+@treturn string final path of component
+@usage
+local sh = require 'lsh'
 
-    return methods[k]
-  end,
-  __newindex = function()
-    error('attempt to index a path object')
-  end,
-  __tostring = function(t)
-    return t.path
-  end,
-  __eq = function (l, r)
-    return l.path == r.path
-  end,
-}
-
--- attrs --
-
---- get path name as string
--- @tparam lsh.path self
--- @treturn string path name as string
+local name = sh.path('dev/init.lua').name
+assert(name == 'init.lua')
+]]
 function attrs.name(self)
   return string.gsub(self.path, '.*/', '')
 end
 
---- get parent directory
--- @tparam lsh.path self
--- @treturn lsh.path parent directory
+--[[- The logical parent of the path.
+@function parent
+@treturn lsh.path parent
+@usage
+local sh = require 'lsh'
+
+local p = sh.path('a/b/c/d/e')
+assert(p.parent == p.path('a/b/c/d'))
+
+p = sh.path('/')
+assert(p.parent == p.path('/'))
+p = sh.path('.')
+assert(p.parent == p.path('.'))
+]]
 function attrs.parent(self)
   local buf = buf_t(#self.path + 1, self.path)
 
-  return methods.new(ffi.string(C.dirname(buf)))
+  return _M.new(ffi.string(C.dirname(buf)))
 end
 
+--[[- An array providing access to the logical ancestors of the path.
+@function parents
+@treturn {lsh.path,...} array of logical ancestors
+@usage
+local sh = require 'lsh'
+
+local p = sh.path('/usr/local/bin/lua')
+assert(p.parents[1] == p.path('/usr/local/bin'))
+assert(p.parents[2] == p.path('/usr/local'))
+assert(p.parents[3] == p.path('/usr'))
+assert(p.parents[4] == p.path('/'))
+]]
 function attrs.parents(self)
   error('not implemented')
 end
@@ -155,17 +167,34 @@ local function splitext(path)
   return path:sub(1, i-1), path:sub(i)
 end
 
---- return the path's extension
--- @tparam lsh.path self
--- @treturn string the extension
+--[[- The file extension of the final component (if any).
+@function suffix
+@treturn string suffix
+@usage
+local sh = require 'lsh'
+
+assert(sh.path('dev/init.lua').suffix == 'lua')
+assert(sh.path('my/lib.tar.gz').suffix == 'gz')
+assert(sh.path('my/lib').suffix == '')
+]]
 function attrs.suffix(self)
   local _, ext = splitext(self.path)
   return ext
 end
 
---- return the path's extensions
--- @tparam lsh.path self
--- @treturn array-of-string extensions
+--[[- A array of the path's file extensions.
+@function suffixes
+@treturn {string,...} array of extensions
+@usage
+local sh = require 'lsh'
+
+local sx = p.path('my/lib.tar.gar').suffixes
+assert(sx[1] == 'tar')
+assert(sx[2] == 'gar')
+
+sx = p.path('my/lib').suffixes
+assert(#sx == 0)
+]]
 function attrs.suffixes(self)
   local path, ext = self.path
   local ret = {}
@@ -179,13 +208,33 @@ function attrs.suffixes(self)
   end
 end
 
+--[[- The final path component, without its suffix.
+@function stem
+@treturn string
+@usage
+local sh = require 'lsh'
+
+assert(p.path('my/lib.tar.gz').stem == 'lib.tar')
+assert(p.path('my/lib.tar').stem == 'lib')
+assert(p.path('my/lib').stem == 'lib')
+]]
 function attrs.stem(path)
   error('not implemented')
 end
 
---- return the path's parts
--- @tparam lsh.path self
--- @treturn array-of-string parts
+--[[- A array giving access to the path's various components.
+@function parts
+@treturn {string,...}
+@usage
+local sh = require 'lsh'
+
+local p = sh.path('/usr/local/bin/lua')
+assert(p.parts[1] == '/')
+assert(p.parts[2] == 'usr')
+assert(p.parts[3] == 'local')
+assert(p.parts[4] == 'bin')
+assert(p.parts[5] == 'lua')
+]]
 function attrs.parts(self)
   local parts = {}
 
@@ -200,67 +249,112 @@ function attrs.parts(self)
   return parts
 end
 
-function attrs.root(p)
+--[[- A string representing the (local or global) root (if any).
+@function root
+@treturn string
+@usage
+local sh = require 'lsh'
+
+local p = sh.path('/usr/local/bin/lua')
+assert(p.root == '/')
+]]
+function attrs.root(self)
   error('not implemented')
 end
 
--- methods --
+--- Path methods.
+-- @section pathmethods
+local methods = tablex.new(0, 25)
 
---- create new @{path} instance
--- @param  ... TODO
--- @treturn[0] path
--- @treturn[1] nil
--- @treturn[1] string error
-function methods.new(...)
-  local path, err = join(...)
-  if err then return nil, err end
+--[[- Returns the type of the instance.
+@function type
+@return the string `"path"`
+@usage
+local sh = require 'lsh'
 
-  return setmetatable({path = path}, path_mt)
+assert(sh.path('/'):type() == 'path')
+]]
+function methods.type()
+  return 'path'
 end
 
---- get type
--- @tparam lsh.path self
--- @treturn[0] string `"path"` if argument is a @{path}
--- @treturn[1] nil otherwise
-function methods.type(self)
-  if type(self) ~= 'table' then return nil end
-  if getmetatable(self) == path_mt then
-    return 'path'
-  end
+--[[- Calling this method is equivalent to combining the path
+with each of the other arguments in turn.
+@function join
+@tparam lsh.path self
+@tparam ... ... `string`, `number` or @{lsh.path}
+@treturn[1] lsh.path new joined `path` instance
+@treturn[2] nil
+@treturn[2] string error message
+@usage
+local sh = require 'lsh'
 
-  return nil
+local p = sh.path('/etc')
+assert(p:join('passwd') == sh.path('/etc/passwd'))
+assert(p:join(sh.path('passwd')) == sh.path('/etc/passwd'))
+assert(p:join('nginx', 'nginx.conf') == sh.path('/etc/nginx/nginx.conf'))
+]]
+function methods.join(self, ...)
+  return _M.new(self.path, ...)
 end
 
---- change directory
--- @tparam lsh.path self
--- @treturn[0] bool `true`
--- @treturn[1] nil
--- @treturn[1] string error
+--[[- Change working directory.
+@function chdir
+@tparam lsh.path self
+@treturn[1] lsh.path self
+@treturn[2] nil
+@treturn[2] string error message
+@usage
+local sh = require 'lsh'
+
+sh.path('/home/user'):chdir()
+]]
 function methods.chdir(self)
   local ok, err = S.chdir(self.path)
-  return ok, tostring(err)
+  if not ok then
+    return ok, tostring(err)
+  end
+
+  return self
 end
 
---- open
--- @tparam lsh.path self
--- @param flags TODO
--- @param mode TODO
--- @return TODO
+--[[- Calls @{lsh.fio.open} on path instance and returning
+a @{lsh.fio.fh} file handle.
+
+**This interface is not finalized and it will be changed
+in incompatible ways!**
+
+@function open
+@tparam lsh.path self
+@tparam table flags `lsh.fio.open` flags
+@tparam table mode `lsh.fio.open` mode
+@treturn[1] lsh.fio.fh file handle
+@treturn[2] nil
+@treturn[2] string error message
+@usage
+local sh = require 'lsh'
+
+local fh = sh.path('/home/user'):open()
+]]
 function methods.open(self, flags, mode)
   return fio.open(self.path, flags, mode)
 end
 
---- join paths
--- @tparam lsh.path self
--- @tparam string ... path parts to append to self
--- @treturn lsh.path new path with the arguments appended to self
-function methods.joinpath(self, ...)
-  return methods.new(self.path, ...)
-end
+--[[- Make the path absolute, resolving any symlinks.
 
---- resolve relative path
--- @tparam lsh.path self
--- @treturn lsh.path `self` resolved to absolute path
+**Symlink resolving is not finished yet.**
+
+@function resolve
+@tparam lsh.path self
+@treturn[1] lsh.path resolved `path` instance
+@treturn[2] nil
+@treturn[2] string error message
+@usage
+local sh = require 'lsh'
+
+local p = sh.path('.')
+assert(p:resolve() == sh.path.cwd())
+]]
 function methods.resolve(self)
   -- TODO: support symlink resolution
   local joined_path = ''
@@ -280,18 +374,7 @@ function methods.resolve(self)
     end
   end
 
-  return methods.new('/' .. table.concat(path_tab, '/'))
-end
-
---- check if file path exists
--- @tparam lsh.path self
--- @treturn bool `true` if the path exists
-function methods.exists(self)
-  if self:stat() then
-    return true
-  end
-
-  return false
+  return _M.new('/' .. table.concat(path_tab, '/'))
 end
 
 --[[- Glob the given relative pattern in the directory represented
@@ -321,7 +404,7 @@ function methods.glob(self, pattern)
   if type(pattern) ~= 'string' then
     error(err_str:format(2, 'glob', 'string', type(pattern)), 2)
   end
-  if not self:isdir() then
+  if not self:is_dir() then
     return nil, 'path must be directory'
   end
 
@@ -334,114 +417,222 @@ function methods.glob(self, pattern)
   local len = #paths
   local res = tablex.new(len, 0)
   for i=1,len do
-    res[i] = methods.new(paths[i])
+    res[i] = _M.new(paths[i])
   end
 
   return res, err
 end
 
---- get metadata
--- @tparam lsh.path self
--- @return TODO
+--[[- Return file metadata.
+
+**This interface is not finalized and it will be changed
+in incompatible ways!**
+
+@function stat
+@tparam lsh.path self
+@treturn[1] cdata ljsyscall stat_t
+@treturn[2] nil
+@usage
+local sh = require 'lsh'
+
+local st = sh.path('.'):stat()
+]]
 function methods.stat(self)
   -- TODO: wrap syscall stat object
   return S.stat(self.path)
 end
 
---- check if path is a regular file
--- @tparam lsh.path self
--- @treturn bool `true` if path is a regular file
-function methods.isreg(self)
-  local st = self:stat()
-  if st then
-    return st.isreg
+--[[- Returns path with appended trailing slash.
+@function with_slash
+@tparam lsh.path self
+@treturn string path with trailing slash
+@usage
+local sh = require 'lsh'
+
+assert(sh.path('/var'):with_slash() == '/var/')
+assert(sh.path('log.txt'):with_slash() == 'log.txt/')
+assert(sh.path('/'):with_slash() == '/')
+]]
+function methods.with_slash(self)
+  local path = self.path
+  if path == '/' then
+    return path
+  end
+
+  return ("%s/"):format(path)
+end
+
+--[[- Whether the path points to an existing file or directory.
+@function exists
+@tparam lsh.path self
+@treturn[1] lsh.path `self`
+@treturn[2] false
+@usage
+local sh = require 'lsh'
+
+assert(sh.path('.'):exists())
+]]
+function methods.exists(self)
+  if self:stat() then
+    return self
   end
 
   return false
 end
 
-methods.isfile = methods.isreg
+--[[- Return `self` if the path points to a regular file,
+`false` otherwise.
 
---- check if path is a directory
--- @tparam lsh.path self
--- @treturn bool `true` if path is a directory
-function methods.isdir(self)
+`false` is also returned if the path doesn’t exist
+or is a broken symlink.
+
+@function is_file
+@tparam lsh.path self
+@treturn[1] lsh.path `self`
+@treturn[2] false
+@usage
+local sh = require 'lsh'
+
+assert(sh.path('/etc/resolv.conf'):is_file())
+]]
+function methods.is_file(self)
   local st = self:stat()
-  if st then
-    return st.isdir
+  if st and st.isreg then
+    return self
   end
 
   return false
 end
 
---- check if path is a link
--- @tparam lsh.path self
--- @treturn bool `true` if path is a link
-function methods.islnk(self)
+--[[- Return `self` if the path points to a directory,
+`false` otherwise.
+
+`false` is also returned if the path doesn’t exist
+or is a broken symlink.
+
+@function is_dir
+@tparam lsh.path self
+@treturn[1] lsh.path `self`
+@treturn[2] false
+]]
+function methods.is_dir(self)
   local st = self:stat()
-  if st then
-    return st.islnk
+  if st and st.isdir then
+    return self
   end
 
   return false
 end
 
---- check if path is a socket
--- @tparam lsh.path self
--- @treturn bool `true` if path is a socket
-function methods.issock(self)
+--[[- Return `self` if the path points to symbolic link,
+`false` otherwise.
+
+`false` is also returned if the path doesn’t exist.
+
+@function is_link
+@tparam lsh.path self
+@treturn[1] lsh.path `self`
+@treturn[2] false
+]]
+function methods.is_link(self)
   local st = self:stat()
-  if st then
-    return st.issock
+  if st and st.islnk then
+    return self
   end
 
   return false
 end
 
---- check if path is a pipe
--- @tparam lsh.path self
--- @treturn bool `true` if path is a pipe
-function methods.isfifo(self)
+--[[- Return `self` if the path points to socket,
+`false` otherwise.
+
+`false` is also returned if the path doesn’t exist or
+is a broken symlink.
+
+@function is_sock
+@tparam lsh.path self
+@treturn[1] lsh.path `self`
+@treturn[2] false
+]]
+function methods.is_sock(self)
   local st = self:stat()
-  if st then
-    return st.isfifo
+  if st and st.issock then
+    return self
   end
 
   return false
 end
 
---- check if path is a block device
--- @tparam lsh.path self
--- @treturn bool `true` if path is a block device
-function methods.isblk(self)
+--[[- Return `self` if the path points to a FIFO,
+`false` otherwise.
+
+`false` is also returned if the path doesn’t exist or
+is a broken symlink.
+
+@function is_fifo
+@tparam lsh.path self
+@treturn[1] lsh.path `self`
+@treturn[2] false
+]]
+function methods.is_fifo(self)
   local st = self:stat()
-  if st then
-    return st.isblk
+  if st and st.isfifo then
+    return self
   end
 
   return false
 end
 
---- check if path is a character device
--- @tparam lsh.path self
--- @treturn bool `true` if path is a character device
-function methods.ischar(self)
+--[[- Return `self` if the path points to a block device,
+`false` otherwise.
+
+`false` is also returned if the path doesn’t exist or
+is a broken symlink.
+
+@function is_blk
+@tparam lsh.path self
+@treturn[1] lsh.path `self`
+@treturn[2] false
+]]
+function methods.is_blk(self)
   local st = self:stat()
-  if st then
-    return st.ischar
+  if st and st.isblk then
+    return self
   end
 
   return false
 end
 
---- set extended attribute
--- @tparam lsh.path self
--- @tparam string name
--- @tparam string value
--- @tparam ?string flag `"CREATE"` or `"REPLACE"`
--- @treturn[0] bool `true`
--- @treturn[1] nil
--- @treturn[1] string error
+--[[- Return `self` if the path points to a character device,
+`false` otherwise.
+
+`false` is also returned if the path doesn’t exist or
+is a broken symlink.
+
+@function is_char
+@tparam lsh.path self
+@treturn[1] lsh.path `self`
+@treturn[2] false
+]]
+function methods.is_char(self)
+  local st = self:stat()
+  if st and st.ischar then
+    return self
+  end
+
+  return false
+end
+
+--[[- Set extended attribute.
+@function setxattr
+@tparam lsh.path self
+@tparam string name name of the attribute
+@tparam string value value of the attribute
+@tparam[opt] string flag `"CREATE"` or `"REPLACE"`
+@treturn[1] bool `true`
+@treturn[2] nil
+@treturn[2] string error
+]]
 function methods.setxattr(self, name, value, flag)
   if type(name) ~= 'string' then
     error(err_str:format(2, 'setxattr', 'string', type(name)), 2)
@@ -455,15 +646,17 @@ function methods.setxattr(self, name, value, flag)
     return nil, tostring(err)
   end
 
-  return true
+  return ok
 end
 
---- get extended attribute
--- @tparam lsh.path self
--- @tparam string name
--- @treturn[0] bool `true`
--- @treturn[1] nil
--- @treturn[1] string error
+--[[- Get extended attribute.
+@function getxattr
+@tparam lsh.path self
+@tparam string name name of the attribute
+@treturn[1] string value of the attribute
+@treturn[2] nil
+@treturn[2] string error
+]]
 function methods.getxattr(self, name)
   if type(name) ~= 'string' then
     error(err_str:format(2, 'getxattr', 'string', type(name)), 2)
@@ -477,12 +670,14 @@ function methods.getxattr(self, name)
   return res
 end
 
---- remove extended attribute
--- @tparam lsh.path self
--- @tparam string name
--- @treturn[0] bool `true`
--- @treturn[1] nil
--- @treturn[1] string error
+--[[- Remove extended attribute.
+@function removexattr
+@tparam lsh.path self
+@tparam string name name of the attribute
+@treturn[1] bool `true`
+@treturn[2] nil
+@treturn[2] string error
+]]
 function methods.removexattr(self, name)
   if type(name) ~= 'string' then
     error(err_str:format(2, 'removexattr', 'string', type(name)), 2)
@@ -496,11 +691,13 @@ function methods.removexattr(self, name)
   return ok
 end
 
---- list extended attributes
--- @tparam lsh.path self
--- @treturn[0] table table of extended attribute names to values
--- @treturn[1] nil
--- @treturn[1] string error
+--[[- List extended attribute.
+@function listxattr
+@tparam lsh.path self
+@treturn[1] table name/value pairs of extended attributes
+@treturn[2] nil
+@treturn[2] string error
+]]
 function methods.listxattr(self)
   local res, err = S.listxattr(self.path)
   if err then
@@ -510,13 +707,43 @@ function methods.listxattr(self)
   return res
 end
 
---- create directory
--- @tparam lsh.path self
--- @param mode TODO
--- @tparam bool parents wether to create parent directories
--- @param exists TODO unused?
--- @return TODO
+--[[- Create a new directory at this given path.
+
+If mode is given, it is combined with the process' `umask`
+value to determine the file mode and access flags. If the
+path already exists, `nil` with error message is returned.
+
+If parents is `true`, any missing parents of this path are
+created as needed; they are created with the default permissions
+without taking mode into account (mimicking the POSIX
+`mkdir -p` command).
+
+If parents is `false` (the default), a missing parent returns
+`nil` and error message.
+
+If exists is `false` (the default), `nil` and error message is
+returned if the target directory already exists.
+
+If exists is `true`, file exist errors will be ignored
+(same behavior as the POSIX `mkdir -p` command), but only if
+the last path component is not an existing non-directory file.
+
+@function mkdir
+@tparam lsh.path self
+@tparam string mode set mode (default is `0755`)
+@tparam[opt] bool parents wether to create parent directories
+@tparam[opt] bool exists whether to ignore file exist errors
+@treturn[1] bool `true`
+@treturn[2] nil
+@treturn[2] string error
+]]
 function methods.mkdir(self, mode, parents, exists)
+  if mode and type(mode) ~= 'string' then
+    error(err_str:format(2, 'mkdir', 'string or nil', type(mode)), 2)
+  else
+    mode = '0755'
+  end
+
   if parents then
     local i, pparts = 1, self.parent.parts
     local pparts_len = #pparts
@@ -524,13 +751,13 @@ function methods.mkdir(self, mode, parents, exists)
 
     -- find missing dir in path
     while i <= pparts_len do
-      local p = methods.new(path, pparts[i])
+      local p = _M.new(path, pparts[i])
 
       if not p:exists() then
         break
       end
 
-      if not p:isdir() then
+      if not p:is_dir() then
         return nil, ("path %s: not a directory"):format(p)
       end
 
@@ -550,12 +777,6 @@ function methods.mkdir(self, mode, parents, exists)
     end
   end
 
-  if mode and type(mode) ~= 'string' then
-    error(err_str:format(2, 'mkdir', 'string or nil', type(mode)), 2)
-  else
-    mode = '0755'
-  end
-
   local ok, err = S.mkdir(self.path, mode)
   if err then
     if err.EXIST and exists then
@@ -568,11 +789,21 @@ function methods.mkdir(self, mode, parents, exists)
   return ok
 end
 
---- remove directory
--- @tparam lsh.path self
--- @return TODO
+--[[- Remove this directory. The directory must be empty.
+@function rmdir
+@todo recursive remove
+@tparam lsh.path self
+@treturn[1] bool `true`
+@treturn[2] nil
+@treturn[2] string error
+]]
 function methods.rmdir(self)
-  return S.rmdir(self.path)
+  local ok, err = S.rmdir(self.path)
+  if not ok then
+    return nil, tostring(err)
+  end
+
+  return ok
 end
 
 local function dir_close(dir)
@@ -582,7 +813,7 @@ end
 
 local function dir_next(dir)
   if not dir.fd then
-    return nil, "dir ended"
+    return nil, 'dir ended'
   end
   local d
   repeat
@@ -606,14 +837,25 @@ local function dir_next(dir)
     end
   until d
 
-  return methods.new(d.name)
+  return _M.new(d.name)
 end
 
---- list directory
--- @tparam lsh.path self
--- @treturn[0] iterator @{lsh.path}s in the directory
--- @treturn[1] nil
--- @treturn[1] string error
+--[[- When the path points to a directory, returns function
+iterator over the entries of a given directory.
+
+Each time the iterator is called it returns a directory entry
+as a path instance, or `nil` if there are no more entries.
+You can also iterate by calling `iter:next()`,
+and explicitly close the directory before the iteration finished
+with `iter:close()`. Returns a `nil` and error message if path
+is not a directory.
+
+@function lsdir
+@tparam lsh.path self
+@treturn[0] func iterator yielding @{lsh.path}s in the directory
+@treturn[1] nil
+@treturn[1] string error
+]]
 function methods.lsdir(self)
   local size = pagesize
   local buf = S.t.buffer(size)
@@ -627,11 +869,22 @@ function methods.lsdir(self)
                     close = dir_close}
 end
 
---- update modified date or create a file
--- @tparam lsh.path self
--- @param mode TODO
--- @param exists TODO
--- @return TODO
+--[[- Updates modified date of the file or creates it.
+
+If mode is given, it is combined with the process' umask value
+to determine the file mode and access flags. If the file already
+exists, the function succeeds if exists is `true` (and its
+modification time is updated to the current time), otherwise
+`nil` and error message is returned.
+
+@function touch
+@tparam lsh.path self
+@tparam[opt] string mode set mode (default is `0666`)
+@tparam[opt] bool exists whether to ignore file exist errors
+@treturn[1] bool `true`
+@treturn[2] nil
+@treturn[2] string error
+]]
 function methods.touch(self, mode, exists)
   if self:exists() and exists then
     S.utime(self.path)
@@ -653,56 +906,162 @@ function methods.touch(self, mode, exists)
   return ok
 end
 
---- delete file
--- @tparam lsh.path self
--- @treturn[0] bool `true`
--- @treturn[1] nil
--- @treturn[1] string error
-function methods.unlink(self)
+--[[- Remove this file or symbolic link.
+
+If the path points to a directory, use `rmdir` instead.
+
+If missing is `false` (the default), `nil` and error string
+is returned if the path does not exist.
+
+If missing is `true`, `file not found` error will be ignored
+(same behavior as the POSIX `rm -f` command).
+
+@function unlink
+@tparam lsh.path self
+@tparam[opt] bool missing wether to error on missing file
+@treturn[1] bool `true`
+@treturn[2] nil
+@treturn[2] string error
+]]
+function methods.unlink(self, missing)
   local ok, err = S.unlink(self.path)
   if err then
+    if err.NOENT and missing then
+      return true
+    end
+
     return nil, tostring(err)
   end
 
   return ok
 end
 
-local _M = tablex.new(0, 3)
+local path_mt = {
+  __index = function (t, k)
+    if attrs[k] then
+      return attrs[k](t)
+    end
 
---- create new @{path} instance
--- @param ... TODO
--- @treturn[0] lsh.path new @{path} instance
--- @treturn[1] nil
--- @treturn[1] string error
+    return methods[k]
+  end,
+  __tostring = function(t)
+    return t.path
+  end,
+  --[[- Returns number of components in the path.
+  @function __len
+  @tparam lsh.path self
+  @treturn number number of components
+  @usage
+  local sh = require 'lsh'
+
+  assert(#sh.path('/etc', 'resolv.conf') == 3)
+  ]]
+  __len = function(self)
+    return #self.parts
+  end,
+  --[[- Check if paths are identical.
+  @function __eq
+  @tparam lsh.path l left value
+  @tparam lsh.path r right value
+  @treturn[1] bool
+  @treturn[2] nil
+  @treturn[2] string error message
+  @usage
+  local sh = require 'lsh'
+
+  assert(sh.path('/etc', 'resolv.conf') == sh.path('/etc', 'resolv.conf'))
+  ]]
+  __eq = function (l, r)
+    return l.path == r.path
+  end,
+  --[[- Concatinates path with a string or string with a path,
+  returning the new joined path instance.
+  @function __div
+  @tparam lsh.path|string l left value
+  @tparam lsh.path|string r right value
+  @treturn[1] lsh.path new joined `path` instance
+  @treturn[2] nil
+  @treturn[2] string error message
+  @usage
+  local sh = require 'lsh'
+
+  assert(sh.path('/etc'):join(resolv.conf') == sh.path('/etc') / 'resolv.conf')
+  ]]
+  __div = function(l, r)
+    if type(l) == 'table' and l.type and l.type() == 'path' then
+      return l:join(r)
+    end
+
+    return r:join(l)
+  end,
+}
+
+--- Functions
+-- @section functions
+
+--[[- Constructs a new @{path} instance.
+@function new
+@tparam ... ... `string`, `number` or @{lsh.path}
+@treturn lsh.path new @{path} instance
+@usage
+local sh = require 'lsh'
+
+sh.path.new('/', 'var')
+]]
 function _M.new(...)
-  return methods.new(...)
+  local path, err = join(...)
+  if err then return nil, err end
+
+  return setmetatable({path = path}, path_mt)
 end
 
---- get working directory
--- @treturn[0] lsh.path current working directory
--- @treturn[1] nil
--- @treturn[1] string error
+--[[- Get current working directory.
+@function cwd
+@treturn[1] lsh.path @{path} pointing to workidir
+@treturn[2] nil
+@treturn[2] string error message
+@usage
+local sh = require 'lsh'
+
+sh.path.cwd()
+]]
 function _M.cwd()
   local cwd, err = S.getcwd()
   if err then
     return nil, tostring(err)
   end
 
-  return methods.new(cwd)
+  return _M.new(cwd)
 end
 
---- get home directory
--- @treturn[0] lsh.path home directory
--- @treturn[1] nil
--- @treturn[1] string error
+--[[- Get home directory.
+@function home
+@treturn[1] lsh.path @{path} pointing to `HOME` directory
+@treturn[2] nil
+@treturn[2] string error message
+@usage
+local sh = require 'lsh'
+
+sh.path.home()
+]]
 function _M.home()
-  return methods.new(os.getenv('HOME'))
+  return _M.new(os.getenv('HOME'))
 end
 
 local mt = {
   __index = _M,
-  __call = function(_, ...)
-    return methods.new(...)
+  --[[- Shorthand for `new`.
+  @function __call
+  @tparam table _M module table
+  @tparam ... ... `string`, `number` or @{lsh.path}
+  @treturn lsh.path new @{path} instance
+  @usage
+  local sh = require 'lsh'
+
+  sh.path('/', 'var')
+  ]]
+  __call = function(_M, ...)
+    return _M.new(...)
   end
 }
 
