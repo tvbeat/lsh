@@ -1,4 +1,4 @@
---- file input/output
+--- File input/output.
 -- @module lsh.fio
 
 local S = require 'syscall'
@@ -10,13 +10,20 @@ local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
 local _M = tablex.new(0, 1)
 
---- open file
--- @tparam string path path to file
--- @param flags TODO
--- @param mode TODO
--- @treturn[0] lsh.fio.fh file handle
--- @treturn[1] nil
--- @treturn[1] string error
+--[[- Opens a file at path with the options specified by
+flags and mode.
+
+**This interface is not finalized and it will be changed
+in incompatible ways!**
+
+@function open
+@tparam string path path to file
+@tparam table flags flags
+@tparam table mode mode
+@treturn[0] lsh.fio.fh file handle
+@treturn[1] nil
+@treturn[1] string error
+]]
 function _M.open(path, flags, mode)
   if type(path) ~= 'string' then
     error(err_str:format(1, 'open', 'string', type(path)), 2)
@@ -30,15 +37,13 @@ function _M.open(path, flags, mode)
 
   table.insert(flags, 'cloexec')
 
-  -- No need to worry about closing fd, it has close method assigned to __gc
-  -- in ffi metatable (ljsyscall syscall/methods.lua#L152)
   -- TODO
   local fd, err = S.open(path, table.concat(flags, ', '), table.concat(mode, ', '))
   if err then
     return nil, tostring(err)
   end
 
-  return fh(fd)
+  return fh.new(fd)
 end
 
 return _M

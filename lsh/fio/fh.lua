@@ -1,4 +1,4 @@
---- file handle
+--- File input/output handle.
 -- @module lsh.fio.fh
 
 local ffi = require 'ffi'
@@ -35,45 +35,34 @@ local function fh_str(fh)
   return table.concat(res)
 end
 
-local _M = tablex.new(0, 8)
-local fh_mt = {
-  __index = _M,
-  __tostring = function(t)
-    return fh_str(t)
-  end,
-}
+--- Fh methods.
+-- @section fh
+local methods = tablex.new(0, 8)
 
---- create a new file descriptor instance
--- @param fd TODO
--- @treturn lsh.fio.fh
-function _M.new(fd)
-  -- TODO: proper check, convert lua file handle
-  if type(fd) ~= 'cdata' then
-    error(err_str:format(1, 'new', 'cdata', type(fd)), 2)
-  end
+--[[- Returns the instance type.
+@function type
+@return the string `"fh"`
+@usage
+local sh = require 'lsh'
 
-  return setmetatable({fd = fd}, fh_mt)
+assert(sh.fio.open('/dev/null').type() == 'fh')
+]]
+function methods.type()
+  return 'fh'
 end
 
---- return `"fh"` if input is @{fh} type
--- @param self
--- @treturn[0] string `"fh"` if argument is a file handle
--- @treturn[1] `nil` otherwise
-function _M.type(self)
-  if type(self) ~= 'table' then return nil end
-  if getmetatable(self) == fh_mt then
-    return 'fh'
-  end
+--[[- Close file handle.
+@function close
+@tparam lsh.fio.fh self
+@treturn[0] bool `true`
+@treturn[1] nil
+@treturn[1] string error
+@usage
+local sh = require 'lsh'
 
-  return nil
-end
-
---- close file handle
--- @tparam lsh.fio.fh self
--- @treturn[0] bool `true`
--- @treturn[1] nil
--- @treturn[1] string error
-function _M.close(self)
+assert(sh.fio.open('/dev/null'):close())
+]]
+function methods.close(self)
   local ok, err = self.fd:close()
   if err then
     return nil, tostring(err)
@@ -82,17 +71,115 @@ function _M.close(self)
   return ok
 end
 
---- write to file handle
--- @tparam lsh.fio.fh self
--- @param buf TODO
--- @param len TODO
--- @return TODO
-function _M.write(self, buf, len)
+--[[- Read from file handle to provided buffer.
+
+This advanced interface is avalable for micro optimizations.
+See `read` for everyday usage.
+
+@function read_to_buf
+@tparam lsh.fio.fh self
+@tparam cdata buf buffer to read
+@tparam number len lenght of the buffer
+@treturn[1] number the number of bytes read into buffer
+@treturn[2] nil
+@treturn[2] string output
+@usage
+local sh = require 'lsh'
+local ffi = require 'ffi'
+
+local buf_len = 4096
+local buf = ffi.new('char[?]', buf_len)
+
+local in_fh = sh.fio.open('in.txt', 'rdonly', 'RUSR')
+local out_fh = sh.fio.open('out.txt', {'creat', 'wronly'}, {'RUSR', 'WUSR'})
+
+repeat
+  local len = in_fh:read_to_buf(buf, buf_len)
+  out_fh:write(buf, len)
+until len <= 0
+]]
+function methods.read_to_buf(self, buf, len)
+  if type(buf) ~= 'cdata' then
+    error(err_str:format(2, 'read_to_buf', 'cdata', type(buf), 2))
+  end
+  if type(len) ~= 'number' then
+    error(err_str:format(3, 'read_to_buf', 'number', type(len)), 2)
+  end
+
+  local offset = self.offset or offset_t(0)
+  local res, err = self.fd:pread(buf, len, offset)
+  if err then
+    return nil, tostring(err)
+  end
+
+  self.offset = offset + res
+
+  return res
+end
+
+local rlen = S.getpagesize() -- size of default read buffer
+local rbuf = buf_t(rlen)
+
+--[[- Read from file handle.
+@function read
+@tparam lsh.fio.fh self
+@tparam[opt] number len maximum number of bytes to read
+@treturn[1] string the data that was read
+@treturn[2] nil
+@treturn[2] string error
+@usage
+local sh = require 'lsh'
+
+local zeros = sh.fio.open('/dev/zero'):read(3)
+assert(#zeros == 3)
+]]
+function methods.read(self, len)
+  if len and type(len) ~= 'number' then
+    error(err_str:format(2, 'read', 'number', type(len)), 2)
+  end
+  len = len or rlen
+
+  local tmpbuf = rbuf -- try to reuse allocated buffer
+  if len > rlen then
+    -- if provided size is bigger than page size allocate
+    -- new temporary buffer
+    tmpbuf = buf_t(len)
+  end
+
+  local res, err = self:read_to_buf(tmpbuf, len)
+  if err then
+    return nil, tostring(err)
+  end
+
+  return ffi.string(tmpbuf, res)
+end
+
+--[[- Write to file handle.
+@function write
+@tparam lsh.fio.fh self
+@tparam cdata|string buf buffer to write
+@tparam[opt] int len lenght of the buffer
+(only needed if buf is `cdata`)
+@treturn[1] bool true if buffer contained data
+@treturn[2] nil
+@treturn[2] string error
+@usage
+local sh = require 'lsh'
+
+assert(sh.fio.open('/dev/null'):write('abc'))
+
+-- advanced usage, passing `cdata` pointers
+local ffi = require 'ffi'
+local str = 'abc'
+local buf = ffi.new('char[?]', #str, str)
+assert(sh.fio.open('/dev/null'):write(buf, #str))
+]]
+function methods.write(self, buf, len)
   local offset = self.offset or offset_t(0)
   local buf_type = type(buf)
 
   if buf_type == 'string' then
-    len = #buf
+    len = len or #buf
   elseif buf_type == 'cdata' then
     if type(len) ~= 'number' then
       error(err_str:format(3, 'write', 'number', type(len)), 2)
@@ -111,61 +198,21 @@ function _M.write(self, buf, len)
   return res >= 0
 end
 
-local rsize = 4096 -- size of default read buffer
-local rbuf = buf_t(rsize)
+--[[- Seek to position.
 
---- read from file handle, return data or put in buffer, depending on arguments TODO
--- @tparam lsh.fio.fh self
--- @tparam int|string buf maximum number of bytes to read and return (second argument should not be given), or buffer to return data in (second argument should be given)
--- @tparam[opt] int size maximum number of bytes to return in `buf`. first argument must be buffer.
--- @treturn[0] string the data that was read, if given only a size in the first argument
--- @treturn[1] int the number of bytes read into `buf`, if both arguments were given
-function _M.read(self, buf, size)
-  -- read(size) -> str
-  -- read(buf, size) -> len
-  local offset = self.offset or offset_t(0)
-  local buf_type = type(buf)
-  local tmpbuf
+**This interface is not finalized and it will be changed
+in incompatible ways!**
 
-  if not buf or buf_type == 'number' then
-    size = buf -- buf is holding size
+@function seek
+@tparam lsh.fio.fh self
+@tparam number position
+@treturn number position
+@usage
+local sh = require 'lsh'
 
-    tmpbuf = rbuf -- try to reuse allocated buffer
-    if size then
-      if size > rsize then
-        -- if provided size is bigger than default allocate new buf
-        tmpbuf = buf_t(size)
-      end
-    else
-      size = rsize
-    end
-  elseif buf_type == 'cdata' then
-    if type(size) ~= 'number' then
-      error(err_str:format(3, 'read', 'number', type(size)), 2)
-    end
-  else
-    error(err_str:format(2, 'read', 'number or cdata', buf_type), 2)
-  end
-
-  local res, err = self.fd:pread(tmpbuf or buf, size, offset)
-  if err then
-    return nil, tostring(err)
-  end
-
-  self.offset = offset + res
-
-  if tmpbuf then
-    return ffi.string(tmpbuf, res)
-  end
-
-  return res
-end
-
---- seek to position
--- @tparam lsh.fio.fh self
--- @tparam int position
--- @treturn int TODO
-function _M.seek(self, position)
+local position = sh.fio.open('/dev/zero'):seek(3)
+]]
+function methods.seek(self, position)
   -- TODO
   if type(position) ~= 'number' then
     error(err_str:format(2, 'seek', 'number', type(position)), 2)
@@ -176,17 +223,29 @@ function _M.seek(self, position)
   return tonumber(self.offset)
 end
 
---- read line by line, similar to io.lines
--- @tparam lsh.fio.fh self
--- @treturn iterator TODO
-function _M.lines(self)
-  -- TODO:
-  --  * implementation is portable and simple to understand
-  --    but very slow, options are to move pointer arithmetic
-  --    to plain C or ditch mmap completely
-  --  * in !GC64 mode we should find address for mmap outside
-  --    of lower 4G to not mess with LuaJIT allocations
-  --  * optional delimiter flag
+--[[- Returns an iterator function that, each time it
+is called, returns a new line from the file handle.
+@function lines
+@tparam lsh.fio.fh self
+@treturn func function iterator
+@usage
+local sh = require 'lsh'
+
+for line in sh.memfd('foo\nbar'):lines() do
+  print(line)
+end
+--> foo
+--> bar
+]]
+function methods.lines(self)
+  --[[ todo
+    * implementation is portable and simple to understand
+      but very slow, options are to move pointer arithmetic
+      to plain C or ditch mmap completely
+    * in !GC64 mode we should find address for mmap outside
+      of lower 4G to not mess with LuaJIT allocations
+    * optional delimiter flag
+  ]]
   local nl = string.byte('\n')
   local cr = string.byte('\r')
 
@@ -256,18 +315,50 @@ function _M.lines(self)
   end
 end
 
---- get system file descriptor
--- @tparam lsh.fio.fh self
--- @return TODO
-function _M.getfd(self)
-  return self.fd:getfd()
+--[[- Returns file descriptor number.
+@function getfd
+@tparam lsh.fio.fh self
+@treturn number file descriptor number
+@usage
+local sh = require 'lsh'
+
+print(sh.fio.open('/dev/null'):getfd())
+--> 3
+]]
+function methods.getfd(self)
+  return tonumber(self.fd:getfd())
 end
 
-local mt = {
-  __index = _M,
-  __call = function(t, fd)
-    return _M.new(fd)
+--- Functions
+-- @section functions
+local _M = tablex.new(0, 1)
+local fh_mt = {
+  __index = methods,
+  __tostring = function(t)
+    return fh_str(t)
   end,
 }
 
-return setmetatable({}, mt)
+--[[- Constructs new file handle and returns it.
+
+There is no need to use this method directly, see
+@{lsh.memfd} and @{lsh.fio.open} for practical usage.
+
+@function new
+@tparam cdata fd ljsyscall fd
+@treturn lsh.fio.fh new `fh` instance
+@usage
+local sh = require 'lsh'
+
+local fh = memfd()
+]]
+function _M.new(fd)
+  -- TODO: proper check, convert lua file handle
+  if type(fd) ~= 'cdata' then
+    error(err_str:format(1, 'new', 'cdata', type(fd)), 2)
+  end
+
+  return setmetatable({fd = fd}, fh_mt)
+end
+
+return _M
