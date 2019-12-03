@@ -1,4 +1,4 @@
---- in-memory anonymous file
+--- In-memory anonymous file.
 -- @module lsh.memfd
 
 local S = require 'syscall'
@@ -8,106 +8,66 @@ local tablex = require 'lsh.tablex'
 
 local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
-local _M = tablex.new(0, 8)
-local memfd_mt = {
-  __index = _M,
-  __tostring = function(t)
-    return tostring(t.fh)
-  end,
-}
+local _M = tablex.new(0, 1)
 
---- create new @{memfd} instance
--- @tparam cdata buf TODO
--- @tparam int len TODO
--- @treturn[0] lsh.memfd new @{memfd} instance
--- @treturn[1] nil
--- @treturn[1] string error
+--[[- Constructs new in-memory anonymous file and returns
+handle to it.
+@function new
+@tparam[opt] cdata|string buf initialize new instance with buffer
+@tparam[opt] int len lenght of the inital buffer (only needed if buf is `cdata`)
+@treturn[1] lsh.fio.fh new @{fio.fh} instance
+@treturn[2] nil
+@treturn[2] string error
+@usage
+local sh = require 'lsh'
+
+local fh = memfd.new()
+fh:write('abc')
+fh:seek(0)
+print(fh)
+]]
 function _M.new(buf, len)
-  if buf and type(buf) ~= 'string' then
-    error(err_str:format(1, 'new', 'string or nil', type(buf)), 2)
-  end
-  if len and type(len) ~= 'number' then
-    error(err_str:format(2, 'new', 'number', type(len)), 2)
-  end
 
-  -- No need to worry about closing fd, it has close method assigned to __gc
-  -- in ffi metatable (ljsyscall syscall/methods.lua#L152)
-  local fd, err = S.memfd_create('', 'cloexec') -- TODO: sealing
+  local fd, err = S.memfd_create('', 'cloexec')
   if err then
     return nil, tostring(err)
   end
 
-  local memfd = setmetatable({fh = fh(fd)}, memfd_mt)
+  local fh_ = fh.new(fd)
 
   if buf then
-    memfd:write(buf, len)
+    local buf_type = type(buf)
+    if buf_type == 'cdata' then
+      if type(len) ~= 'number' then
+        error(err_str:format(2, 'new', 'number', type(len)), 2)
+      end
+    elseif buf_type ~= 'string' then
+      error(err_str:format(1, 'new', 'string or cdata', type(buf)), 2)
+    end
+
+    fh_:write(buf, len)
   end
 
-  return memfd
-end
-
---- return 'memfd' if input is memfd type
--- @tparam lsh.memfd self
--- @treturn[0] string `"memfd"`
--- @treturn[1] nil if the argument is not a @{memfd}
-function _M.type(self)
-  if type(self) ~= 'table' then return nil end
-  if getmetatable(self) == memfd_mt then
-    return 'memfd'
-  end
-
-  return nil
-end
-
---- close file descriptor
--- @tparam lsh.memfd self
--- @return TODO
-function _M.close(self)
-  return self.fh:close()
-end
-
---- write buffer to file descriptor
--- @tparam lsh.memfd self
--- @tparam string buf data to write
--- @tparam int len number of bytes to write
--- @return TODO
-function _M.write(self, buf, len)
-  return self.fh:write(buf, len)
-end
-
---- read to buffer from file descriptor
--- @tparam lsh.memfd self
--- @tparam string buf buffer to hold data
--- @tparam int size maximum number of bytes to read
--- @return TODO
-function _M.read(self, buf, size)
-  return self.fh:read(buf, size)
-end
-
---- seek file descriptor to position
--- @tparam lsh.memfd self
--- @tparam TODO position position to seek to
--- @return TODO
-function _M.seek(self, position)
-  return self.fh:seek(position)
-end
-
---- return lines TODO
--- @tparam lsh.memfd self
--- @return TODO
-function _M.lines(self)
-  return self.fh:lines()
-end
-
---- get file descriptor
--- @tparam lsh.memfd self
--- @return TODO
-function _M.getfd(self)
-  return self.fh:getfd()
+  return fh_
 end
 
 local mt = {
   __index = _M,
+  --[[- Shorthand for `new`.
+  @function __call
+  @tparam table _M module table
+  @tparam[opt] cdata|string buf initial buffer to fill new instance
+  @tparam[opt] int len lenght of the inital buffer (only needed if buf is `cdata`)
+  @treturn[1] lsh.fio.fh new @{fio.fh} instance
+  @treturn[2] nil
+  @treturn[2] string error
+  @usage
+  local sh = require 'lsh'
+
+  local fh = memfd('abc')
+  fh:seek(0)
+  print(fh)
+  ]]
   __call = function(t, buf, len)
     return _M.new(buf, len)
   end,
