@@ -33,43 +33,22 @@ end
 
 local _M = tablex.new(0, 2)
 
-local function arg_str(ar)
-  if type(ar) == 'string' then
-    return ar
+--[[- Execute program with args using execvp.
+@tparam string program program to execute
+@tparam table array of arguments
+]]
+function _M.execvp(program, args)
+  local args_len = #args
+  -- program + args_len + NULL
+  local cargs_len = args_len + 2
+  local cargs = string_array_t(cargs_len)
+  cargs[0] = program -- push program
+  for i=1,args_len do -- push args
+    cargs[i] = tostring(args[i])
   end
+  cargs[cargs_len] = nil -- NULL
 
-  local ar_len = #ar
-  local ret = tablex.new(ar_len, 0)
-
-  for i=1,ar_len do
-    local p = ar[i]
-    local p_type = type(ar)
-
-    if p_type == 'table' then
-      ret[i] = ("%s"):format(arg_str(p))
-    else
-      ret[i] = p
-    end
-  end
-
-  return table.concat(ret, ' ')
-end
-
---- execvp
--- @param cmdargs TODO
--- @return TODO
-function _M.execvp(cmdargs)
-  local cmdargs_len = #cmdargs
-  local cargs = string_array_t(cmdargs_len + 1)
-
-  -- normalize args to strings
-  for i=1,cmdargs_len do
-    cargs[i-1] = arg_str(cmdargs[i])
-  end
-
-  cargs[cmdargs_len] = nil
-
-  local ret = C.execvp(cargs[0], cargs)
+  local ret = C.execvp(program, cargs)
   return ret, ffi_error()
 end
 
