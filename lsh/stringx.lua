@@ -1,5 +1,6 @@
---- string extensions
--- @module lsh.stringx
+--[[- String extensions.
+@module lsh.stringx
+]]
 
 local ffi = require 'ffi'
 
@@ -77,13 +78,15 @@ local function string_split(inp, sep, maxsplit)
   return rv
 end
 
-local _M = tablex.new(0, 1)
+local _M = tablex.new(0, 2)
 
---- split string by separator
--- @tparam string inp input string
--- @tparam[opt] string sep separator, default is whitespace
--- @tparam[opt] int max maximum number of  pieces to split into, default is unlimited
--- @treturn array-of-string the pieces between separtors
+--[[- Split string by separator.
+@function split
+@tparam string inp input string
+@tparam[opt] string sep separator (default is whitespace)
+@tparam[opt] int max maximum number of pieces to split into (default is unlimited)
+@treturn {string,...} the pieces between separtors
+]]
 function _M.split(inp, sep, max)
   -- based on tarantool (2.1): src/lua/string.lua
   if type(inp) ~= 'string' then
@@ -104,9 +107,17 @@ function _M.split(inp, sep, max)
   return string_split(inp, sep, max)
 end
 
--- Remove any final newline from a string.
-function _M.chomp(str)
-  return str:gsub('\n$', '')
+--[[- Remove any final newline from a string.
+@function chomp
+@tparam string inp input string
+@treturn string without trailing newline
+]]
+function _M.chomp(inp)
+  if type(inp) ~= 'string' then
+    error(err_str:format(1, 'chomp', 'string', type(inp)), 2)
+  end
+
+  return inp:gsub('\n$', '')
 end
 
 return _M
