@@ -18,110 +18,102 @@ print "-- cmd manipulation --"
 
 do
   local cmd = sh.cmd('echo')
-  cmd:append('1', sh.path('/tmp'))
+  cmd:args({'1', sh.path('/tmp')})
   assert(tostring(cmd) == 'echo 1 /tmp')
-  cmd:remove(3)
-  assert(tostring(cmd) == 'echo 1')
-  cmd:extend({2, 3}, {5})
-  assert(tostring(cmd) == 'echo 1 2 3 5')
-  cmd:insert(5, 4)
-  assert(tostring(cmd) == 'echo 1 2 3 4 5')
+  cmd:arg('bla')
+  assert(tostring(cmd) == 'echo 1 /tmp bla')
 end
 
 --
 print "-- exec simple --"
 --
 
-local res = sh.cmd('echo', '"blabla""', 1):run()
-
-print(res)
+do
+  local status = sh.cmd('echo', '"blabla""', 1):run()
+  assert(status:success())
+end
 
 --
 print "-- exec simple status --"
 --
 do
-  local res = sh.cmd('echo', 1):workdir('/tmp')
-                               :stdout('/dev/null')
-                               :exec()
+  local child = sh.cmd('echo', 1):workdir('/tmp')
+                                 :stdout('/dev/null')
+                                 :spawn()
 
-  -- we are faster than cmd here, so status should return alive -> true
-  assert(res.status.alive)
-  assert(res:wait())
+  -- we should be faster than `echo` here, so try_wait should return `false`
+  assert(child:try_wait() == false)
+  assert(child:wait())
 end
 
 --
 print "-- exec status wait --"
 --
 do
-  local res = sh.cmd('echo', 1):workdir('/tmp')
-                               :stdout('/dev/null')
-                               :exec()
+  local child = sh.cmd('echo', 1):workdir('/tmp')
+                                 :stdout('/dev/null')
+                                 :spawn()
 
   local status
   repeat
-    status = res.status
-  until not status.alive
+    status = child:try_wait()
+  until status
 
-  assert(res:wait().exit_status)
+  assert(status:success())
 
   -- double wait
-  assert(res:wait())
-
-  assert(res.status.exit_status)
-  assert(res.exit_status)
+  assert(child:wait())
+  assert(child:wait():code() == 0)
 end
 
 --
 print "\n-- exec simple env --"
 --
 
-local res = sh.cmd('printenv', 'MYENV'):env({MYENV = 'test'})
-                                       :stdout(sh.memfd())
-                                       :run()
+local output = sh.cmd('printenv', 'MYENV'):env({MYENV = 'test'})
+                                          :output()
 
-assert(("%s"):format(res.stdout) == 'test')
+assert(("%s"):format(output.stdout) == 'test')
 
 --
 print "\n-- exec simple workdir --"
 --
 
-local res = sh.cmd('cat', '1/cmdline'):workdir('/proc')
-                                      :stdout('/dev/null')
-                                      :stderr(io.stdout)
-                                      :run()
-assert(res.exit_status == 0)
+local status = sh.cmd('cat', '1/cmdline'):workdir('/proc')
+                                         :stdout('/dev/null')
+                                         :stderr(io.stdout)
+                                         :run()
+assert(status:success())
 
 --
 print "\n-- exec 100k args --"
 --
 local cmd = sh.cmd('echo'):workdir('/tmp')
                           :stdout('/dev/null')
-for i=1,100000 do cmd:append(("arg%d"):format(i)) end
-local res = cmd:run()
-assert(res.exit_status == 0)
+for i=1,100000 do cmd:arg(("arg%d"):format(i)) end
+local status = cmd:run()
+assert(status:success())
 
 --
 print "\n-- exec redirect stdout --"
 --
 
-local res = sh.cmd('cat', '1/cmdline'):workdir('/proc')
-                                      :stdout('/tmp/out')
-                                      :run()
-assert(res.exit_status == 0)
+local status = sh.cmd('cat', '1/cmdline'):workdir('/proc')
+                                         :stdout('/tmp/out')
+                                         :run()
+assert(status:success())
 
-local res = sh.cmd('cat', '-'):workdir('/tmp')
-                              :stdin('/tmp/out')
-                              :stdout(sh.memfd())
-                              :run()
+local output = sh.cmd('cat', '-'):workdir('/tmp')
+                                 :stdin('/tmp/out')
+                                 :output()
 
 local fh = sh.open('/tmp/out', 'rdonly', 'RUSR')
-assert(tostring(res.stdout) == tostring(fh))
+assert(tostring(output.stdout) == tostring(fh))
 
 --
 print "\n-- exec redirect stdin --"
 --
 
-local res = sh.cmd('cat'):stdin('/proc/1/cmdline')
-                         :stdout(sh.memfd())
-                         :run()
-assert(#tostring(res.stdout) >= 1)
+local output = sh.cmd('cat'):stdin('/proc/1/cmdline')
+                            :output()
+assert(#tostring(output.stdout) >= 1)

@@ -2,7 +2,7 @@ local path = require 'lsh.path'
 
 local p = path('/etc')
 print(p.path)
-local p2 = p:joinpath('resolv.conf')
+local p2 = p:join('resolv.conf')
 print(p2.name)
 print(p2.parent)
 assert(p2.suffix == '.conf')
@@ -18,7 +18,7 @@ print(ok,err)
 
 local pd = path(os.tmpname())
 pd:unlink() -- remove tmp file
-pd = pd:joinpath('dir') -- add extra dir
+pd = pd:join('dir') -- add extra dir
 local ok, err = pd:mkdir(nil, true) -- mkdir -p
 print(ok, err)
 print(pd)
@@ -30,7 +30,7 @@ print(ok, err)
 
 
 assert(not pd:exists())
-assert(not pd:isdir())
+assert(not pd:is_dir())
 -- xattr
 -- TODO: make sure they are run on fs with xattr enabled
 --local px = path(os.tmpname())

@@ -27,11 +27,9 @@ print('-- memfd exec io --')
 do
   local buf = 'hello'
   local res, err = sh.cmd('cat'):stdin(sh.memfd(buf))
-                                :stdout(sh.memfd())
-                                :run()
+                                :output()
   assert(not err)
 
-  print(tostring(res.stdout))
   assert(tostring(res.stdout) == buf)
 
 end
