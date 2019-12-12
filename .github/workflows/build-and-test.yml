@@ -1,8 +1,8 @@
-name: "Build"
+name: "Build and Test"
 on:
   pull_request:
 jobs:
-  build-and-doc:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
     - name: checkout
