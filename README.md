@@ -2,12 +2,12 @@
 
 Small Lua shell library.
 
-Highly experimental!
+## Doc
 
-See `test/test.lua` for example usage.
+To get started with writing shell scripts, head over to
+[LDoc documentation](https://tvbeat.github.io/lsh/).
 
-
-## Install and Use
+## Install and Use (NIX)
 
 Clone this repo, cd into it, then:
 
