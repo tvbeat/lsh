@@ -94,7 +94,7 @@ local _M = tablex.new(0, 3)
 
 --- Path attributes.
 -- @section pathattr
-local attrs = tablex.new(0, 8)
+local attrs = tablex.new(0, 7)
 
 --[[- A string representing the final path component.
 @function name
@@ -142,7 +142,17 @@ assert(p.parents[3] == p.path('/usr'))
 assert(p.parents[4] == p.path('/'))
 ]]
 function attrs.parents(self)
-  error('not implemented')
+  local parts = self.parent.parts
+  local parts_len = #parts
+
+  local res = tablex.new(parts_len, 0)
+  local par
+  for i=1,parts_len do
+    par = par and par:join(parts[i]) or _M.new(parts[i])
+    table.insert(res, 1, par)
+  end
+
+  return res
 end
 
 --- split a path into basename and extension part
@@ -218,8 +228,20 @@ assert(p.path('my/lib.tar.gz').stem == 'lib.tar')
 assert(p.path('my/lib.tar').stem == 'lib')
 assert(p.path('my/lib').stem == 'lib')
 ]]
-function attrs.stem(path)
-  error('not implemented')
+function attrs.stem(self)
+  local name = self.name
+  local i = #name
+  local ch = name:sub(i, i)
+  while i > 0 and ch ~= '.' do
+    i = i - 1
+    ch = name:sub(i, i)
+  end
+
+  if i == 0 then
+    return name
+  end
+
+  return name:sub(1, i-1)
 end
 
 --[[- A array giving access to the path's various components.
@@ -247,19 +269,6 @@ function attrs.parts(self)
   end
 
   return parts
-end
-
---[[- A string representing the (local or global) root (if any).
-@function root
-@treturn string
-@usage
-local sh = require 'lsh'
-
-local p = sh.path('/usr/local/bin/lua')
-assert(p.root == '/')
-]]
-function attrs.root(self)
-  error('not implemented')
 end
 
 --- Path methods.
@@ -972,6 +981,12 @@ local path_mt = {
   assert(sh.path('/etc', 'resolv.conf') == sh.path('/etc', 'resolv.conf'))
   ]]
   __eq = function (l, r)
+    if type(r) == 'string' then
+      return l.parent == r
+    elseif type(l) == 'string' then
+      return r == l.parent
+    end
+
     return l.path == r.path
   end,
   --[[- Concatinates path with a string or string with a path,
