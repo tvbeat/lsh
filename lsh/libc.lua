@@ -62,12 +62,8 @@ function _M.execvpe(program, args, envs)
     table.insert(environ, ("%s=%s"):format(env, value))
     environ_len = environ_len + 1
   end
-
   -- extra slot for holding NULL
-  local cenviron = string_array_t(environ_len + 1)
-  for i=1,environ_len do
-    cenviron[i-1] = environ[i]
-  end
+  local cenviron = string_array_t(environ_len + 1, environ)
   cenviron[environ_len] = nil -- NULL
 
   -- finally do exec
