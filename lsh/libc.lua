@@ -39,9 +39,11 @@ local _M = tablex.new(0, 2)
 ]]
 function _M.execvp(program, args)
   local args_len = #args
-  -- program + args_len + NULL
-  local cargs_len = args_len + 2
-  local cargs = string_array_t(cargs_len)
+  -- program + args_len
+  local cargs_len = args_len + 1
+  -- cargs array is starting at index zero, extra
+  -- slot is needed for ending NULL
+  local cargs = string_array_t(cargs_len + 1)
   cargs[0] = program -- push program
   for i=1,args_len do -- push args
     cargs[i] = tostring(args[i])
