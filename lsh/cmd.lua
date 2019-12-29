@@ -8,9 +8,9 @@ by adding arguments) prior to spawning:
 ```lua
 local cmd = require 'lsh.cmd'
 
-local output, err = cmd.new('sh'):arg('-c')
-                                 :arg('echo hello')
-                                 :output()
+local output, err = cmd('sh'):arg('-c')
+                             :arg('echo hello')
+                             :output()
 if err then error('failed to execute process') end
 
 local hello = tostring(output.stdout)
@@ -22,7 +22,7 @@ spawn the process.
 ```lua
 local cmd = require 'lsh.cmd'
 
-local echo_hello = cmd.new('sh')
+local echo_hello = cmd('sh')
 echo_hello:arg('-c')
           :arg('echo hello')
 
@@ -38,7 +38,7 @@ and then spawn a new process with the modified settings.
 ```lua
 local cmd = require 'lsh.cmd'
 
-local list_dir = cmd.new('ls')
+local list_dir = cmd('ls')
 
 -- Execute `ls` in the current directory of the program.
 local status, err = list_dir:run()
@@ -55,10 +55,10 @@ if err then error('failed to execute process') end
 Commands can be easily chained into @{pipeline}s by using
 slash (**/**) symbol.
 ```lua
-local cmd = require 'sh.cmd'
+local cmd = require 'lsh.cmd'
 
-local ls = sh.cmd('ls'):workdir('/')
-local tail = sh.cmd('tail')
+local ls = cmd('ls'):workdir('/')
+local tail = cmd('tail')
 
 local pl = ls / tail:arg('-n1')
 local status, err = pl:run()
