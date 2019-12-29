@@ -269,7 +269,7 @@ function methods.workdir(self, wd)
     return self
   end
 
-  local p, err = path(wd)
+  local p, err = path.new(wd)
   if err then return nil, err end
   self._workdir = p
 
@@ -476,6 +476,7 @@ function _M.new(program, ...)
     _program = program,
     _args = tablex.new(args_len, 0),
     _envs = S.environ(), -- returns env/value pairs
+    _workdir = path.cwd()
   }
 
   -- optional args
