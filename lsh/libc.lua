@@ -5,9 +5,12 @@ local ffi = require 'ffi'
 
 local tablex = require 'lsh.tablex'
 
+
 ffi.cdef [[
-  int execvp(const char *, const char* []);
   char *strerror(int errnum);
+  // Function signature is modifyed to avoid casting step
+  // ("const char*" -> "char *const").
+  int execvpe(const char *file, const char*const [], const char*const []);
 
   typedef unsigned long size_t;
 
@@ -33,11 +36,13 @@ end
 
 local _M = tablex.new(0, 2)
 
---[[- Execute program with args using execvp.
+--[[- Execute program with args and environment using execvpe.
 @tparam string program program to execute
-@tparam table array of arguments
+@tparam table args array of arguments
+@tparam table envs map of environment variables
 ]]
-function _M.execvp(program, args)
+function _M.execvpe(program, args, envs)
+  -- cmd args
   local args_len = #args
   -- program + args_len
   local cargs_len = args_len + 1
@@ -50,7 +55,23 @@ function _M.execvp(program, args)
   end
   cargs[cargs_len] = nil -- NULL
 
-  local ret = C.execvp(program, cargs)
+  -- cmd environ
+  local environ = {}
+  local environ_len = 0
+  for env, value in pairs(envs) do
+    table.insert(environ, ("%s=%s"):format(env, value))
+    environ_len = environ_len + 1
+  end
+
+  -- extra slot for holding NULL
+  local cenviron = string_array_t(environ_len + 1)
+  for i=1,environ_len do
+    cenviron[i-1] = environ[i]
+  end
+  cenviron[environ_len] = nil -- NULL
+
+  -- finally do exec
+  local ret = C.execvpe(program, cargs, cenviron)
   return ret, ffi_error()
 end
 

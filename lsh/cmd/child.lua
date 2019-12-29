@@ -90,12 +90,6 @@ local function child_stderr(stderr)
   end
 end
 
-local function child_env(envs)
-  for env, v in pairs(envs) do
-    S.setenv(env, v, true)
-  end
-end
-
 local function child_workdir(path)
   local ok, err = path:chdir()
   if not ok then
@@ -107,7 +101,6 @@ local function exec_cmd(cmd)
   local pid = S.fork()
 
   if pid == 0 then
-    if cmd._envs    then child_env(cmd._envs) end
     if cmd._workdir then child_workdir(cmd._workdir) end
 
     if cmd._stdin  then child_stdin(cmd._stdin)  end
@@ -117,7 +110,7 @@ local function exec_cmd(cmd)
     -- if the parent dies, the children die
     S.prctl("set_pdeathsig", "kill")
 
-    local _, err = libc.execvp(cmd._program, cmd._args)
+    local _, err = libc.execvpe(cmd._program, cmd._args, cmd._envs)
     error("exec: "..err)
   end
 

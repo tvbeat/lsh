@@ -68,6 +68,7 @@ if err then error('failed to execute pipeline processes') end
 @module lsh.cmd
 ]]
 
+local S = require 'syscall'
 
 local tablex   = require 'lsh.tablex'
 local path     = require 'lsh.path'
@@ -309,7 +310,12 @@ sh.cmd('ls'):env_remove('PATH')
             :run()
 ]]
 function methods.env_remove(self, env)
-  error('not implemented')
+  if type(env) ~= 'string' then
+    error(err_str:format(2, 'env', 'string', type(env)), 2)
+  end
+  self._envs[env] = nil
+
+  return self
 end
 
 --[[- Clears the entire environment map for the child process.
@@ -323,7 +329,9 @@ sh.cmd('ls'):env_clear()
             :run()
 ]]
 function methods.env_clear(self)
-  error('not implemented')
+  self._envs = {}
+
+  return self
 end
 
 --[[- Sets or unsets the child process's standard
@@ -467,7 +475,7 @@ function _M.new(program, ...)
   local cmd = {
     _program = program,
     _args = tablex.new(args_len, 0),
-    _envs = {},
+    _envs = S.environ(), -- returns env/value pairs
   }
 
   -- optional args
