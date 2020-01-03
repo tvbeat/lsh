@@ -816,8 +816,10 @@ function methods.rmdir(self)
 end
 
 local function dir_close(dir)
-  dir.fd:close()
-  dir.fd = nil
+  if dir.fd then
+    dir.fd:close()
+    dir.fd = nil
+  end
 end
 
 local function dir_next(dir)
@@ -852,16 +854,17 @@ end
 --[[- When the path points to a directory, returns function
 iterator over the entries of a given directory.
 
-Each time the iterator is called it returns a directory entry
-as a path instance, or `nil` if there are no more entries.
-You can also iterate by calling `iter:next()`,
+Each time the iterator is called with `dir_obj` it returns a
+directory entry as a path instance, or `nil` if there are no
+more entries. You can also iterate by calling `dir_obj:next()`,
 and explicitly close the directory before the iteration finished
-with `iter:close()`. Returns a `nil` and error message if path
+with `dir_obj:close()`. Returns a `nil` and error message if path
 is not a directory.
 
 @function lsdir
 @tparam lsh.path self
 @treturn[0] func iterator yielding @{lsh.path}s in the directory
+@treturn[0] table dir_obj directory object
 @treturn[1] nil
 @treturn[1] string error
 ]]
