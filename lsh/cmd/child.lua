@@ -24,6 +24,7 @@ local S = require 'syscall'
 
 local libc   = require 'lsh.libc'
 local tablex = require 'lsh.tablex'
+local path   = require 'lsh.path'
 
 local status = require 'lsh.cmd.status'
 
@@ -97,6 +98,26 @@ local function child_workdir(path)
   end
 end
 
+-- TODO: portability, currently it only works on linux
+-- with mounted /proc
+-- reference: https://github.com/openssh/openssh-portable/blob/master/openbsd-compat/bsd-closefrom.c
+local function fd_close_from(lowfd)
+  local proc_fd_dir = path('/proc', S.getpid(), 'fd')
+  if not proc_fd_dir:is_dir() then
+    error('/proc is not mounted')
+  end
+  local _, dir_obj = proc_fd_dir:lsdir()
+  local dir_fd = dir_obj.fd:getfd()
+  while true do
+    local dent = dir_obj:next()
+    if not dent then break end
+    local fd = tonumber(dent.name)
+    if fd >= lowfd and fd ~= dir_fd then
+      S.close(fd)
+    end
+  end
+end
+
 local function exec_cmd(cmd)
   local pid = S.fork()
 
@@ -106,6 +127,8 @@ local function exec_cmd(cmd)
     if cmd._stdin  then child_stdin(cmd._stdin)  end
     if cmd._stdout then child_stdout(cmd._stdout) end
     if cmd._stderr then child_stderr(cmd._stderr) end
+
+    fd_close_from(3)
 
     -- if the parent dies, the children die
     S.prctl("set_pdeathsig", "kill")
