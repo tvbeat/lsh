@@ -187,8 +187,8 @@ function methods.wait_with_output(self)
   @table output
   ]]
   local output = {
-    stdout = self._stdout,
-    stderr = self._stderr,
+    stdout = self[#self]._cmd._stdout,
+    stderr = self[1]._cmd._stderr,
     status = _pstatus
   }
 
