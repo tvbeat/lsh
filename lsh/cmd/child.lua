@@ -30,6 +30,9 @@ local status = require 'lsh.cmd.status'
 
 local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
+local mode_urwgror = {'RUSR', 'WUSR', 'RGRP', 'ROTH'}
+local flags_cwt = {'creat', 'wronly', 'trunc'}
+
 local function child_stdin(stdin)
   local stdin_type = type(stdin)
   if stdin_type == 'table' then
@@ -53,7 +56,7 @@ local function child_stdout(stdout)
   local stdout_type = type(stdout)
   if stdout_type == 'table' then
     if stdout:type() == 'path' then
-      local fh, err = stdout:open({'creat', 'wronly', 'trunc'}, {'RUSR', 'WUSR'})
+      local fh, err = stdout:open(flags_cwt, mode_urwgror)
       if err then
         io.stderr:write(err..'\n')
         os.exit(1)
@@ -74,7 +77,7 @@ local function child_stderr(stderr)
   local stderr_type = type(stderr)
   if stderr_type == 'table' then
     if stderr:type() == 'path' then
-      local fh, err = stderr:open({'creat', 'wronly', 'trunc'}, {'RUSR', 'WUSR'})
+      local fh, err = stderr:open(flags_cwt, mode_urwgror)
       if err then
         io.stderr:write(err..'\n')
         os.exit(1)
