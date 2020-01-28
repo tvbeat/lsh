@@ -58,6 +58,15 @@ do -- test parents
   assert(p.parents[1] == path('dev'))
 end
 
+do -- test relative_to
+  local p = path('/etc/passwd')
+  assert(p:relative_to('/') == path('etc/passwd'))
+  assert(p:relative_to('/etc') == path('passwd'))
+  assert(p:relative_to('/etc/passwd') == path())
+  assert(not p:relative_to('/usr'))
+  assert(not p:relative_to('/etc/passwd/bla'))
+end
+
 -- xattr
 -- TODO: make sure they are run on fs with xattr enabled
 --local px = path(os.tmpname())

@@ -307,6 +307,46 @@ function methods.join(self, ...)
   return _M.new(self.path, ...)
 end
 
+--[[- Compute a version of this path relative to the path
+represented by other. If it's impossible, nil and err are returned.
+@function relative_to
+@tparam lsh.path self
+@tparam lsh.path|string other
+@treturn[1] lsh.path new relative `path` instance
+@treturn[2] nil
+@treturn[2] string error message
+@usage
+local sh = require 'lsh'
+
+local p = sh.path('/etc/passwd')
+assert(p:relative_to('/') == sh.path('etc/passwd'))
+assert(p:relative_to('/etc') == sh.path('passwd'))
+]]
+function methods.relative_to(self, other)
+  local err_fmt = "%s does not start with %s"
+  other = _M.new(other)
+
+  local selfp, otherp = self.parts, other.parts
+  local selfp_len, otherp_len = #selfp, #otherp
+  if selfp_len < otherp_len then
+    return nil, (err_fmt):format(self, other)
+  end
+
+  local n = math.min(selfp_len, otherp_len)
+  for i=1,n do
+    if selfp[i] ~= otherp[i] then
+      return nil, (err_fmt):format(self, other)
+    end
+  end
+
+  local rel = {}
+  for i=n+1,#selfp do
+    table.insert(rel, selfp[i])
+  end
+
+  return _M.new(unpack(rel))
+end
+
 --[[- Change working directory.
 @function chdir
 @tparam lsh.path self
