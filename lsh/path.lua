@@ -875,35 +875,38 @@ local function dir_next(dir)
         dir_close(dir)
         return nil, tostring(err)
       end
+      dir.first = true
     end
 
     d = dir.di()
     if not d then
-      dir_close(dir)
-      return nil
-    end
-
-    if d.name == '.' or d.name == '..' then
+      dir.di = nil
+      if dir.first then
+        dir_close(dir)
+        return nil
+      end
+    elseif d.name == '.' or d.name == '..' then
       d = nil
     end
+
+    dir.first = false
   until d
 
-  return _M.new(d.name)
+  return d.name
 end
 
 --[[- When the path points to a directory, returns function
 iterator over the entries of a given directory.
 
 Each time the iterator is called with `dir_obj` it returns a
-directory entry as a path instance, or `nil` if there are no
-more entries. You can also iterate by calling `dir_obj:next()`,
-and explicitly close the directory before the iteration finished
-with `dir_obj:close()`. Returns a `nil` and error message if path
-is not a directory.
+directory entry, or `nil` if there are no more entries. You can
+also iterate by calling `dir_obj:next()`, and explicitly close
+the directory before the iteration finished with `dir_obj:close()`.
+Returns a `nil` and error message if path is not a directory.
 
 @function lsdir
 @tparam lsh.path self
-@treturn[0] func iterator yielding @{lsh.path}s in the directory
+@treturn[0] func iterator yielding directory entries
 @treturn[0] table dir_obj directory object
 @treturn[1] nil
 @treturn[1] string error

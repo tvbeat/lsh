@@ -114,7 +114,7 @@ local function fd_close_from(lowfd)
   while true do
     local dent = dir_obj:next()
     if not dent then break end
-    local fd = tonumber(dent.name)
+    local fd = tonumber(dent)
     if fd >= lowfd and fd ~= dir_fd then
       S.close(fd)
     end
