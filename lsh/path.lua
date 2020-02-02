@@ -938,12 +938,14 @@ modification time is updated to the current time), otherwise
 @treturn[2] string error
 ]]
 function methods.touch(self, mode, exists)
-  if self:exists() and exists then
-    S.utime(self.path)
-    return true
-  else
+  if self:exists() then
+    if exists then
+      S.utime(self.path)
+      return true
+    end
     return nil, 'file exists'
   end
+
   if mode and type(mode) ~= 'string' then
     error(err_str:format(2, 'touch', 'string or nil', type(mode)), 2)
   else
