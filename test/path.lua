@@ -1,4 +1,4 @@
-local path = require 'lsh.path'
+local path = require 'lsh1.path'
 
 local p = path('/etc')
 print(p.path)

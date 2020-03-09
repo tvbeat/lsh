@@ -1,5 +1,5 @@
-local sh = require 'lsh'
-local tablex = require 'lsh.tablex'
+local sh = require 'lsh1'
+local tablex = require 'lsh1.tablex'
 
 local c = {'echo', 1}
 local o = {workdir = '/tmp', stdout = '/dev/null'}

@@ -5,7 +5,7 @@ with pkgs;
 with import ./common.nix { inherit pkgs; };
 
 stdenv.mkDerivation rec {
-  name = "lsh";
+  name = "lsh1";
 
   inherit buildInputs;
 

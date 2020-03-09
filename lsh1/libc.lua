@@ -1,7 +1,7 @@
 local ffi = require 'ffi'
 local S   = require 'syscall'
 
-local tablex = require 'lsh.tablex'
+local tablex = require 'lsh1.tablex'
 
 ffi.cdef [[
   int execvp(const char *, const char* []);

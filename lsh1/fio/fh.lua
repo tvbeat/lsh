@@ -3,7 +3,7 @@
 local ffi = require 'ffi'
 local S   = require 'syscall'
 
-local tablex = require 'lsh.tablex'
+local tablex = require 'lsh1.tablex'
 
 local buf_t = ffi.typeof('char[?]')
 local offset_t = ffi.typeof('uint64_t')

@@ -3,7 +3,7 @@
 local ffi = require 'ffi'
 local S   = require 'syscall'
 
-local fh   = require 'lsh.fio.fh'
+local fh   = require 'lsh1.fio.fh'
 
 local _M = {}
 

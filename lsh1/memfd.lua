@@ -2,8 +2,8 @@
 
 local S = require 'syscall'
 
-local fh     = require 'lsh.fio.fh'
-local tablex = require 'lsh.tablex'
+local fh     = require 'lsh1.fio.fh'
+local tablex = require 'lsh1.tablex'
 
 local _M = {}
 local memfd_mt = {

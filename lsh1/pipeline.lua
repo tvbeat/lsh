@@ -1,7 +1,7 @@
 local S      = require 'syscall'
 
-local exec   = require 'lsh.exec'
-local tablex = require 'lsh.tablex'
+local exec   = require 'lsh1.exec'
+local tablex = require 'lsh1.tablex'
 
 local string = string
 

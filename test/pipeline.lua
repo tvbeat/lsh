@@ -1,4 +1,4 @@
-local sh = require 'lsh'
+local sh = require 'lsh1'
 
 --
 print "-- pipeline --"

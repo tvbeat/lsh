@@ -3,8 +3,8 @@
 local ffi = require 'ffi'
 local S = require 'syscall'
 
-local tablex = require 'lsh.tablex'
-local fio    = require 'lsh.fio'
+local tablex = require 'lsh1.tablex'
+local fio    = require 'lsh1.fio'
 
 ffi.cdef [[
 char *dirname(char *path);

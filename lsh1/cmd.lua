@@ -6,9 +6,9 @@
 local ffi = require 'ffi'
 local S   = require 'syscall'
 
-local libc   = require 'lsh.libc'
-local tablex = require 'lsh.tablex'
-local path   = require 'lsh.path'
+local libc   = require 'lsh1.libc'
+local tablex = require 'lsh1.tablex'
+local path   = require 'lsh1.path'
 
 ffi.cdef [[
 int fileno(struct FILE* stream);

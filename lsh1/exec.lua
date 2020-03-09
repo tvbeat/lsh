@@ -1,9 +1,9 @@
 -- exec structure
 local S = require 'syscall'
 
-local cmd    = require 'lsh.cmd'
-local libc   = require 'lsh.libc'
-local tablex = require 'lsh.tablex'
+local cmd    = require 'lsh1.cmd'
+local libc   = require 'lsh1.libc'
+local tablex = require 'lsh1.tablex'
 
 local function child_fds(cmd_opt)
   local stdin  = cmd_opt.stdin
