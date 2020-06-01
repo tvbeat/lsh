@@ -389,6 +389,45 @@ function methods.open(self, flags, mode)
   return fio.open(self.path, flags, mode)
 end
 
+--[[- Rename this file or directory to the given `target`,
+and return a new path instance pointing to `target`.
+
+If `target` exists and is a file, it will be replaced silently
+if the user has permission. `target` can be either a string
+or another path object.
+
+@function rename
+@tparam lsh.path self
+@tparam string|lsh.path target
+@treturn[1] lsh.path
+@treturn[2] nil
+@treturn[2] string error message
+@usage
+local sh = require 'lsh'
+
+local p = sh.path('foo')
+assert(p:rename('bar') == sh.path('bar'))
+]]
+function methods.rename(self, target)
+  local s = tostring(self)
+  local t
+  if type(target) == 'string' then
+    t = target
+    target = _M.new(target)
+  elseif type(target) == 'table' then
+    t = tostring(target)
+  else
+    error(err_str:format(2, 'rename', 'string or lsh.path', type(target)), 2)
+  end
+
+  local ok, err = os.rename(s, t)
+  if not ok then
+    return nil, err
+  end
+
+  return target
+end
+
 --[[- Make the path absolute, resolving any symlinks.
 
 **Symlink resolving is not finished yet.**
@@ -899,9 +938,12 @@ end
 iterator over the entries of a given directory.
 
 Each time the iterator is called with `dir_obj` it returns a
-directory entry, or `nil` if there are no more entries. You can
-also iterate by calling `dir_obj:next()`, and explicitly close
-the directory before the iteration finished with `dir_obj:close()`.
+directory entry, or `nil` if there are no more entries. The
+entries are yielded in arbitrary order, and the special
+entries `'.'` and `'..'` are not included.
+You can also iterate by calling `dir_obj:next()`, and explicitly
+close the directory before the iteration finished with
+`dir_obj:close()`.
 Returns a `nil` and error message if path is not a directory.
 
 @function lsdir
