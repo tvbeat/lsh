@@ -12,7 +12,7 @@ To get started with writing shell scripts, head over to
 Clone this repo, cd into it, then:
 
 ```
-nix-env -i .
+nix-env -if .
 ```
 
 Run lua scripts with wrapper:
