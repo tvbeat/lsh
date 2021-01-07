@@ -1,10 +1,10 @@
-{ pkgs ? import ./nix/pkgs.nix {} }:
+{ pkgs ? import ./nix { } }:
 
 with pkgs;
-
 let
   common = import ./nix/common.nix { inherit pkgs; };
-in stdenv.mkDerivation rec {
+in
+stdenv.mkDerivation rec {
   pname = "lsh";
   version = "pre";
   src = ./.;
