@@ -1,6 +1,6 @@
-image: nixos/nix:2.2.1
+image: nixos/nix:2.13.3
 
 test:
   script:
-    - nix-shell --run check
-    - nix-shell --run doc
+    - nix develop --command ./bin/lsh test/test.lua
+    - nix develop --command ldoc .
