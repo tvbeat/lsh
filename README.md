@@ -12,7 +12,7 @@ To get started with writing shell scripts, head over to
 Clone this repo, cd into it, then:
 
 ```
-nix-env -if .
+nix profile install .#
 ```
 
 Run lua scripts with wrapper:
@@ -26,24 +26,18 @@ lsh <script.lua>
 Build:
 
 ```
-nix-build
-```
-
-Build documentation package:
-
-```
-nix-build nix/doc.nix
+nix build
 ```
 
 Test:
 
 ```
-nix-shell --run check
+nix develop --command ./bin/lsh test/test.lua
 ```
 
 
 Generate Documentation in `doc/` directory:
 
 ```
-nix-shell --run doc
+nix develop --command ldoc .
 ```

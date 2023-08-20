@@ -1,21 +1,10 @@
-{ pkgs ? import ./nix { } }:
-
-with pkgs;
-let
-  common = import ./nix/common.nix { inherit pkgs; };
-  check = writeShellScriptBin "check" ''
-    luajit test/test.lua
-  '';
-  doc = writeShellScriptBin "doc" ''
-    ldoc .
-  '';
-in
-stdenv.mkDerivation rec {
-  name = "lsh";
-
-  buildInputs = common.buildInputs ++ [ luajit.pkgs.ldoc check doc ];
-
-  shellHook = ''
-    LUA_PATH="$LUA_PATH;$(pwd)/?.lua"
-  '';
-}
+(import
+  (
+    let lock = builtins.fromJSON (builtins.readFile ./flake.lock); in
+    fetchTarball {
+      url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
+      sha256 = lock.nodes.flake-compat.locked.narHash;
+    }
+  )
+  { src = ./.; }
+).shellNix
