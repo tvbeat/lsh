@@ -10,8 +10,9 @@
 
   outputs = { self, nixpkgs, flake-utils, flake-compat }:
     flake-utils.lib.eachDefaultSystem (system: {
-      packages.default = with nixpkgs.legacyPackages.${system};
-        stdenv.mkDerivation {
+      packages.default = self.packages.${system}.lsh;
+      packages.lsh = with nixpkgs.legacyPackages.${system};
+        luajit.pkgs.buildLuaPackage {
           pname = "lsh";
           version = "pre";
 
