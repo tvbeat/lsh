@@ -13,34 +13,49 @@ local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
 local function spawn_pipeline(pl)
   local pl_len = #pl
-  local in_ = pl._stdin
   local children = tablex.new(pl_len, 0)
 
+  local cur_stdin
   for i=1,pl_len do
-    local r, w
+    local next_stdin, cur_stdout
 
-    if i == pl_len then
-      w = pl._stdout
-    else
+    if i ~= pl_len then
       local status, err
-      status, err, r, w = S.pipe()
+      status, err, next_stdin, cur_stdout = S.pipe()
+      assert(status, err)
     end
 
     local cmd = pl[i]:clone()
-    if in_ then cmd._stdin = in_ end
-    if w then cmd._stdout = w end
+
+    if cur_stdin then
+      cmd._stdin = cur_stdin
+    elseif pl._stdin then
+      cmd._stdin = pl._stdin
+    end
+
+    if cur_stdout then
+      cmd._stdout = cur_stdout
+    elseif pl._stdout then
+      cmd._stdout = pl._stdout
+    end
+
+    -- todo: does it make sense ?
     if pl._stderr then cmd._stderr = pl._stderr end
+
     children[i] = child.new(cmd, false)
 
-    if in_ and i ~= pl_len and type(in_) ~= 'table' then
-      S.close(in_)
+    if cur_stdin then
+      S.close(cur_stdin)
+      cur_stdin = nil
     end
 
-    if i ~= pl_len then
-      S.close(w)
+    if next_stdin then
+      cur_stdin = next_stdin
     end
 
-    in_ = r
+    if cur_stdout then
+      S.close(cur_stdout)
+    end
   end
 
   return children
