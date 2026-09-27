@@ -27,6 +27,12 @@ jobs:
     - name: build doc
       run: cp -r --no-preserve=mode "$(nix build .#doc --print-out-paths)/share/doc/lsh" ./doc
 
+    - name: add commit and its timestamp to footer
+      run: |
+        date=$(TZ=UTC git log -1 --format=%cd --date=format-local:'%Y-%m-%d %H:%M:%S')
+        commit="<a href=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA\">${GITHUB_SHA::7}</a>"
+        find doc -name '*.html' -exec sed -i "s|Last updated [^<]*</i>|Last updated $date UTC ($commit)</i>|" {} +
+
     - name: upload doc
       uses: actions/upload-pages-artifact@v5
       with:
