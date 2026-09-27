@@ -783,9 +783,8 @@ If `exists` is `true`, it ignores this error
 function methods.mkdir(self, mode, parents, exists)
   if mode and type(mode) ~= 'string' then
     error(err_str:format(2, 'mkdir', 'string or nil', type(mode)), 2)
-  else
-    mode = '0755'
   end
+  mode = mode or '0755'
 
   if parents then
     local i, pparts = 1, self.parent.parts
@@ -952,9 +951,8 @@ function methods.touch(self, mode, exists)
 
   if mode and type(mode) ~= 'string' then
     error(err_str:format(2, 'touch', 'string or nil', type(mode)), 2)
-  else
-    mode = '0666'
   end
+  mode = mode or '0666'
 
   local ok, err = S.creat(self.path, mode)
   if err then
