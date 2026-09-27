@@ -24,8 +24,8 @@ jobs:
     - name: install nix
       uses: cachix/install-nix-action@v31
 
-    - name: gen-doc
-      run: nix develop --command ldoc .
+    - name: build doc
+      run: cp -r --no-preserve=mode "$(nix build .#doc --print-out-paths)/share/doc/lsh" ./doc
 
     - name: upload doc
       uses: actions/upload-pages-artifact@v5

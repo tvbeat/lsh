@@ -3,73 +3,64 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
     flake-compat.url = "github:edolstra/flake-compat";
     flake-compat.flake = false;
   };
 
-  outputs = { self, nixpkgs, flake-utils, flake-compat }:
-    flake-utils.lib.eachDefaultSystem (system: {
-      packages.default = self.packages.${system}.lsh;
-      packages.lsh = with nixpkgs.legacyPackages.${system};
-        luajit.pkgs.buildLuaPackage {
-          pname = "lsh";
-          version = "pre";
+  outputs =
+    { self, nixpkgs, ... }:
+    let
+      inherit (nixpkgs) lib;
 
-          src = ./.;
+      # lsh uses Linux-only interfaces (memfd, /proc, prctl)
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
 
-          nativeBuildInputs = [ makeWrapper luajit.pkgs.ldoc ];
-          nativeCheckInputs = [ luajit.pkgs.busted ];
-          propagatedBuildInputs = [ luajit.pkgs.ljsyscall ];
+      forAllSystems =
+        f:
+        lib.genAttrs systems (
+          system:
+          f (
+            import nixpkgs {
+              inherit system;
+              overlays = [ self.overlays.default ];
+            }
+          )
+        );
 
-          buildPhase = ''
-            ldoc .
-          '';
+      version = "0.3.0-unstable-${lib.substring 0 8 (self.lastModifiedDate or "19700101")}";
+    in
+    {
+      # adds `lsh` to the LuaJIT package set (`luajit.pkgs.lsh`)
+      overlays.default = final: prev: {
+        luajit_2_1 = prev.luajit_2_1.override (old: {
+          packageOverrides = lib.composeExtensions (old.packageOverrides or (_: _: { })) (
+            luaFinal: luaPrev: {
+              lsh = luaFinal.callPackage ./package.nix { inherit version; };
+            }
+          );
+        });
+      };
 
-          doCheck = true;
-          checkPhase = ''
-            runHook preCheck
-            busted
-            runHook postCheck
-          '';
+      packages = forAllSystems (pkgs: {
+        default = pkgs.luajit.pkgs.lsh;
+        lsh = pkgs.luajit.pkgs.lsh;
+        doc = pkgs.luajit.pkgs.lsh.doc;
+      });
 
-          installPhase = ''
-            mkdir -p $out/share/lua/${luajit.luaversion}/
-            cp lsh.lua $out/share/lua/${luajit.luaversion}/
-            cp -r lsh $out/share/lua/${luajit.luaversion}/
-
-            mkdir -p $out/bin
-            cp bin/lsh $out/bin/
-            wrapProgram $out/bin/lsh \
-              --argv0 lsh \
-              --set LUA_PATH  "${luajit.pkgs.luaLib.genLuaPathAbsStr luajit.pkgs.ljsyscall};$out/share/lua/${luajit.luaversion}/?.lua;;" \
-              --set LUA_CPATH ";;"
-
-            mkdir -p $out/share/doc/lsh
-            cp -r doc/* $out/share/doc/lsh/
-          '';
-
-          meta = with lib; {
-            description = "Small Lua shell library";
-            homepage = "https://github.com/tvbeat/lsh";
-            license = licenses.mit;
-          };
-        };
-
-      devShells.default = with nixpkgs.legacyPackages.${system};
-        mkShell {
+      devShells = forAllSystems (pkgs: {
+        default = pkgs.mkShell {
           name = "lsh";
 
-          packages = [
-            luajit
-            luajit.pkgs.busted
-            luajit.pkgs.ldoc
-            luajit.pkgs.ljsyscall
-          ];
+          inputsFrom = [ pkgs.luajit.pkgs.lsh ];
+          packages = [ pkgs.luajit ];
 
           shellHook = ''
             LUA_PATH="$LUA_PATH;$(pwd)/?.lua"
           '';
         };
-    });
+      });
+    };
 }
