@@ -31,8 +31,8 @@ local C = ffi.C
 local string_array_t = ffi.typeof("const char *[?]")
 local glob_t = ffi.typeof("glob_t[1]")
 
-local function ffi_error()
-  return ffi.string(C.strerror(ffi.errno()))
+local function ffi_error(errnum)
+  return ffi.string(C.strerror(errnum or ffi.errno()))
 end
 
 local _M = tablex.new(0, 3)
@@ -84,7 +84,7 @@ local glob_ret_codes = setmetatable({
   [2] = "GLOB_ABORTED",
   [3] = "GLOB_NOMATCH",
   [4] = "GLOB_NOSYS",
-}, {__index = "UNKNOWN_ERROR"})
+}, {__index = function() return "UNKNOWN_ERROR" end})
 
 local glob_errors = {}
 local function glob_callback(path, eerrno)
