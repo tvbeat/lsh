@@ -240,7 +240,7 @@ function methods.args(self, args)
     if not arg then
       error(err_tbl_str:format(2, i, 'args',
         'string or number or lsh.path',
-        type(args[i]), 2))
+        type(args[i])), 2)
     end
     table.insert(self._args, arg)
   end

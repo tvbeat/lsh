@@ -100,7 +100,7 @@ until len <= 0
 ]]
 function methods.read_to_buf(self, buf, len)
   if type(buf) ~= 'cdata' then
-    error(err_str:format(2, 'read_to_buf', 'cdata', type(buf), 2))
+    error(err_str:format(2, 'read_to_buf', 'cdata', type(buf)), 2)
   end
   if type(len) ~= 'number' then
     error(err_str:format(3, 'read_to_buf', 'number', type(len)), 2)
