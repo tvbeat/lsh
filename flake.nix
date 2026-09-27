@@ -40,8 +40,8 @@
             cp bin/lsh $out/bin/
             wrapProgram $out/bin/lsh \
               --argv0 lsh \
-              --set LUA_PATH  "$LUA_PATH;$out/share/lua/${luajit.luaversion}/?.lua;;" \
-              --set LUA_CPATH "$LUA_CPATH;;"
+              --set LUA_PATH  "${luajit.pkgs.luaLib.genLuaPathAbsStr luajit.pkgs.ljsyscall};$out/share/lua/${luajit.luaversion}/?.lua;;" \
+              --set LUA_CPATH ";;"
 
             mkdir -p $out/share/doc/lsh
             cp -r doc/* $out/share/doc/lsh/
