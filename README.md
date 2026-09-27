@@ -32,7 +32,7 @@ nix build
 Test:
 
 ```
-nix develop --command ./bin/lsh test/test.lua
+nix develop --command busted
 ```
 
 Generate the documentation in the `doc/` directory:

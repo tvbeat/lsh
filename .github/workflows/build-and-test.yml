@@ -15,4 +15,4 @@ jobs:
       run: nix build
 
     - name: test
-      run: nix develop --command ./bin/lsh test/test.lua
+      run: nix develop --command busted

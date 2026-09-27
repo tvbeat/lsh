@@ -11,5 +11,5 @@ description = [[
 ]]
 readme = "README.md"
 format = 'markdown'
-examples = {'test'}
+examples = {'spec'}
 style = "!fixed"

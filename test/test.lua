@@ -1,6 +1,0 @@
-require 'test.cmd'
-require 'test.pipeline'
-require 'test.memfd'
-require 'test.libc'
-require 'test.stringx'
-require 'test.path'

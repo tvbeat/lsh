@@ -19,16 +19,18 @@
           src = ./.;
 
           nativeBuildInputs = [ makeWrapper luajit.pkgs.ldoc ];
+          nativeCheckInputs = [ luajit.pkgs.busted ];
           propagatedBuildInputs = [ luajit.pkgs.ljsyscall ];
 
           buildPhase = ''
             ldoc .
           '';
 
-          # todo: fix tests to not use file system
-          # doCheck = true;
+          doCheck = true;
           checkPhase = ''
-            LUA_PATH="$LUA_PATH;$(pwd)/?.lua" luajit test/test.lua
+            runHook preCheck
+            busted
+            runHook postCheck
           '';
 
           installPhase = ''
@@ -60,6 +62,7 @@
 
           packages = [
             luajit
+            luajit.pkgs.busted
             luajit.pkgs.ldoc
             luajit.pkgs.ljsyscall
           ];
