@@ -111,6 +111,11 @@ describe('cmd', function()
     assert.are.equal('err', tostring(out.stderr))
   end)
 
+  it('rejects a non-cmd table in child.new', function()
+    local child = require 'lsh.cmd.child'
+    assert.has_error(function() child.new(sh.pipeline()) end)
+  end)
+
   describe('argument errors', function()
     it('reports the type of args', function()
       local ok, err = pcall(function() sh.cmd('ls'):args(1) end)

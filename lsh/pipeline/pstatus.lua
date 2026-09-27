@@ -7,7 +7,6 @@ The `run` method of @{lsh.pipeline} and the `wait` method of
 
 @module lsh.pipeline.pstatus
 ]]
-local S = require 'syscall'
 local tablex = require 'lsh.tablex'
 
 local status = require 'lsh.cmd.status'

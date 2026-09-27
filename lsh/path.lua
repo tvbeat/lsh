@@ -405,7 +405,7 @@ assert(p:resolve() == sh.path.cwd())
 ]]
 function methods.resolve(self)
   -- TODO: support symlink resolution
-  local joined_path = ''
+  local joined_path
   local path_tab = {}
 
   if string.sub(self.path, 1, 1) == '/' then

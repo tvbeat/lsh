@@ -40,6 +40,11 @@ describe('pipeline', function()
     assert.are.equal('err', tostring(out.stderr))
   end)
 
+  it('rejects a non-pipeline table in children.new', function()
+    local children = require 'lsh.pipeline.children'
+    assert.has_error(function() children.new(sh.cmd('ls')) end)
+  end)
+
   it('kills all processes', function()
     local children = sh.pipeline():add(sh.cmd('sleep', 10))
                                   :add(sh.cmd('sleep', 10))

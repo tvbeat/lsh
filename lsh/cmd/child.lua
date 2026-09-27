@@ -359,7 +359,7 @@ local child = require 'lsh.cmd.child'
 child.new(sh.cmd('echo', 1))
 ]]
 function _M.new(cmd, clone)
-  if type(cmd) ~= 'table' or not cmd.type or not cmd:type() == 'cmd' then
+  if type(cmd) ~= 'table' or not cmd.type or cmd:type() ~= 'cmd' then
     error(err_str:format(1, 'new', 'cmd', type(cmd)), 2)
   end
 

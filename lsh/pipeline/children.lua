@@ -236,7 +236,7 @@ Use @{lsh.pipeline.run} or @{lsh.pipeline.spawn}.
 @treturn lsh.pipeline.children `children`
 ]]
 function _M.new(pl)
-  if type(pl) ~= 'table' or not pl.type or not pl:type() == 'pipeline' then
+  if type(pl) ~= 'table' or not pl.type or pl:type() ~= 'pipeline' then
     error(err_str:format(1, 'new', 'pipeline object', type(pl)), 2)
   end
   if #pl == 0 then return nil, 'pipeline is empty' end
