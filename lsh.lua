@@ -1,4 +1,4 @@
---[[- The lsh, powerful lua shell scripting toolbelt.
+--[[- The lsh Lua shell scripting library.
 @author Luka Blašković <lblasc at tvbeat.com>
 @copyright 2018-2026 TVbeat
 @license MIT

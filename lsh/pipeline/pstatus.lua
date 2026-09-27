@@ -1,10 +1,9 @@
---[[-- Describes the result of a pipeline children processes after
-they have terminated.
+--[[-- Describes the result of the child processes of a pipeline
+after they have terminated.
 
-This struct is used to represent the exit statuses of a children processes.
-Children processes are created via the @{lsh.pipeline} struct and their exit
-statuses are exposed through the `run` method, or the `wait` method of
-a @{lsh.pipeline.children} processes.
+This struct holds the exit statuses of the child processes.
+The `run` method of @{lsh.pipeline} and the `wait` method of
+@{lsh.pipeline.children} return it.
 
 @module lsh.pipeline.pstatus
 ]]
@@ -19,7 +18,7 @@ local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 -- @section status
 local methods = tablex.new(0, 3)
 
---[[- Returns the type of a instance.
+--[[- Returns the type of the instance.
 @function type
 @return the string `"pipeline_status"`
 ]]
@@ -27,10 +26,9 @@ function methods.type()
   return 'pipeline_status'
 end
 
---[[- Was termination successful?
+--[[- Returns `true` if all processes exited with status zero.
 
-Signal termination is not considered a success,
-and success is defined as a zero exit status.
+If a signal terminated a process, it returns `false`.
 
 @function success
 @tparam lsh.pipeline.pstatus self
@@ -38,8 +36,8 @@ and success is defined as a zero exit status.
 @usage
 local sh = require 'lsh'
 
-local status = sh.pipeline():add('mkdir'):arg('projects')
-                                         :run()
+local status = sh.pipeline():add(sh.cmd('mkdir', 'projects'))
+                            :run()
 if status:success() then
   print('"projects/" directory created')
 else
@@ -56,24 +54,21 @@ function methods.success(self)
   return true
 end
 
---[[- Returns the array of exit codes of the processes, if any.
+--[[- Returns the array of exit codes of the processes.
 
-It will return `nil` if the processes were terminated by a signal.
+For each process, see @{lsh.cmd.status.code}.
 
 @function codes
 @tparam lsh.pipeline.pstatus self
-@treturn[1] number
-@treturn[2] nil
+@treturn {number,...} array of exit codes
 @usage
 local sh = require 'lsh'
 
-local status = sh.cmd('mkdir'):arg('projects')
-                              :run()
-local code = status:code()
-if code then
-  print(("Exited with status code: %d"):format(code))
-else
-  print('Process terminated by signal')
+local status = sh.pipeline():add(sh.cmd('ls'))
+                            :add(sh.cmd('tail'))
+                            :run()
+for i, code in ipairs(status:codes()) do
+  print(("Process %d exited with status code: %d"):format(i, code))
 end
 ]]
 function methods.codes(self)
@@ -98,15 +93,17 @@ local status_mt = {
 --- Functions
 -- @section functions
 
---[[- Constructs the new `pstatus` instance.
+--[[- Constructs a new `pstatus` instance.
 
-There is no need to use this method directly, see @{lsh.pipeline.run} and
-@{lsh.pipeline.spawn} for practical program execution.
+You do not need to call this function directly.
+Use @{lsh.pipeline.run} or @{lsh.pipeline.spawn}.
 
 @tparam lsh.pipeline.children children instance
-@tparam[opt] bool hang hang by default
+@tparam[opt] bool hang block until all processes exit
 @treturn[1] lsh.pipeline.pstatus `pstatus`
-@treturn[2] boolean false if process didn't terminate
+@treturn[2] boolean `false` if a process did not exit yet
+@treturn[3] nil
+@treturn[3] string error message
 ]]
 function _M.new(children, hang)
   if type(children) ~= 'table' then

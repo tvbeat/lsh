@@ -7,7 +7,7 @@ file = {'lsh.lua', 'lsh',
   }
 }
 description = [[
-  `lsh` - lua shell scripting library.
+  `lsh` - Lua shell scripting library.
 ]]
 readme = "README.md"
 format = 'markdown'

@@ -10,13 +10,17 @@ local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
 local _M = tablex.new(0, 1)
 
---[[- Suspend execution of the calling thread for the given
+--[[- Suspends execution of the calling thread for the given
 number of seconds.
 @function sleep
-@tparam number sec seconds to sleep
-@treturn[0] bool `true`
-@treturn[1] nil
-@treturn[1] string error
+@tparam number secs seconds to sleep
+@treturn[1] bool `true`
+@treturn[2] nil
+@treturn[2] string error
+@usage
+local sh = require 'lsh'
+
+sh.sleep(1)
 ]]
 function _M.sleep(secs)
   if type(secs) ~= 'number' then

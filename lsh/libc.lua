@@ -8,7 +8,7 @@ local tablex = require 'lsh.tablex'
 
 ffi.cdef [[
   char *strerror(int errnum);
-  // Function signature is modifyed to avoid casting step
+  // Function signature is modified to avoid casting step
   // ("const char*" -> "char *const").
   int execvpe(const char *file, const char*const [], const char*const []);
 
@@ -36,7 +36,7 @@ end
 
 local _M = tablex.new(0, 2)
 
---[[- Execute program with args and environment using execvpe.
+--[[- Executes the program with args and environment using execvpe.
 @tparam string program program to execute
 @tparam table args array of arguments
 @tparam table envs map of environment variables
@@ -85,10 +85,10 @@ local function glob_callback(path, eerrno)
 end
 local glob_callback_c = ffi.cast("int (*)(const char *, int)", glob_callback)
 
---[[- Glob the given path with pattern.
+--[[- Globs the given path pattern.
 @function glob
 @tparam string ppattern path pattern to match
-@treturn[1] {string,...} array of paths instances
+@treturn[1] {string,...} array of paths
 @treturn[1] table map of path keys and err string values (if any)
 @treturn[2] nil
 @treturn[2] string error message

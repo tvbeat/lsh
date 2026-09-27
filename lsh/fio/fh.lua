@@ -45,22 +45,22 @@ local methods = tablex.new(0, 8)
 @usage
 local sh = require 'lsh'
 
-assert(sh.fio.open('/dev/null').type() == 'fh')
+assert(sh.open('/dev/null'):type() == 'fh')
 ]]
 function methods.type()
   return 'fh'
 end
 
---[[- Close file handle.
+--[[- Closes the file handle.
 @function close
 @tparam lsh.fio.fh self
-@treturn[0] bool `true`
-@treturn[1] nil
-@treturn[1] string error
+@treturn[1] bool `true`
+@treturn[2] nil
+@treturn[2] string error
 @usage
 local sh = require 'lsh'
 
-assert(sh.fio.open('/dev/null'):close())
+assert(sh.open('/dev/null'):close())
 ]]
 function methods.close(self)
   local ok, err = self.fd:close()
@@ -71,18 +71,18 @@ function methods.close(self)
   return ok
 end
 
---[[- Read from file handle to provided buffer.
+--[[- Reads from the file handle into the given buffer.
 
-This advanced interface is avalable for micro optimizations.
-See `read` for everyday usage.
+This low-level interface is for micro-optimizations.
+For usual reads, see `read`.
 
 @function read_to_buf
 @tparam lsh.fio.fh self
-@tparam cdata buf buffer to read
-@tparam number len lenght of the buffer
+@tparam cdata buf buffer to read into
+@tparam number len length of the buffer
 @treturn[1] number the number of bytes read into buffer
 @treturn[2] nil
-@treturn[2] string output
+@treturn[2] string error
 @usage
 local sh = require 'lsh'
 local ffi = require 'ffi'
@@ -90,8 +90,8 @@ local ffi = require 'ffi'
 local buf_len = 4096
 local buf = ffi.new('char[?]', buf_len)
 
-local in_fh = sh.fio.open('in.txt', 'rdonly', 'RUSR')
-local out_fh = sh.fio.open('out.txt', {'creat', 'wronly'}, {'RUSR', 'WUSR'})
+local in_fh = sh.open('in.txt', 'rdonly', 'RUSR')
+local out_fh = sh.open('out.txt', {'creat', 'wronly'}, {'RUSR', 'WUSR'})
 
 repeat
   local len = in_fh:read_to_buf(buf, buf_len)
@@ -120,7 +120,7 @@ end
 local rlen = S.getpagesize() -- size of default read buffer
 local rbuf = buf_t(rlen)
 
---[[- Read from file handle.
+--[[- Reads from the file handle.
 @function read
 @tparam lsh.fio.fh self
 @tparam[opt] number len maximum number of bytes to read
@@ -130,7 +130,7 @@ local rbuf = buf_t(rlen)
 @usage
 local sh = require 'lsh'
 
-local zeros = sh.fio.open('/dev/zero'):read(3)
+local zeros = sh.open('/dev/zero'):read(3)
 assert(#zeros == 3)
 ]]
 function methods.read(self, len)
@@ -154,25 +154,25 @@ function methods.read(self, len)
   return ffi.string(tmpbuf, res)
 end
 
---[[- Write to file handle.
+--[[- Writes to the file handle.
 @function write
 @tparam lsh.fio.fh self
 @tparam cdata|string buf buffer to write
-@tparam[opt] int len lenght of the buffer
-(only needed if buf is `cdata`)
-@treturn[1] bool true if buffer contained data
+@tparam[opt] int len length of the buffer
+(required if buf is `cdata`)
+@treturn[1] bool `true`
 @treturn[2] nil
 @treturn[2] string error
 @usage
 local sh = require 'lsh'
 
-assert(sh.fio.open('/dev/null'):write('abc'))
+assert(sh.open('/dev/null', 'wronly'):write('abc'))
 
 -- advanced usage, passing `cdata` pointers
 local ffi = require 'ffi'
 local str = 'abc'
 local buf = ffi.new('char[?]', #str, str)
-assert(sh.fio.open('/dev/null'):write(buf, #str))
+assert(sh.open('/dev/null', 'wronly'):write(buf, #str))
 ]]
 function methods.write(self, buf, len)
   local offset = self.offset or offset_t(0)
@@ -198,10 +198,9 @@ function methods.write(self, buf, len)
   return res >= 0
 end
 
---[[- Seek to position.
+--[[- Sets the position for the next read or write.
 
-**This interface is not finalized and it will be changed
-in incompatible ways!**
+This interface is not final. It will change in incompatible ways.
 
 @function seek
 @tparam lsh.fio.fh self
@@ -210,7 +209,7 @@ in incompatible ways!**
 @usage
 local sh = require 'lsh'
 
-local position = sh.fio.open('/dev/zero'):seek(3)
+local position = sh.open('/dev/zero'):seek(3)
 ]]
 function methods.seek(self, position)
   -- TODO
@@ -223,8 +222,8 @@ function methods.seek(self, position)
   return tonumber(self.offset)
 end
 
---[[- Returns an iterator function that, each time it
-is called, returns a new line from the file handle.
+--[[- Returns an iterator function. Each call returns the next
+line from the file handle, without the line ending.
 @function lines
 @tparam lsh.fio.fh self
 @treturn func function iterator
@@ -315,14 +314,14 @@ function methods.lines(self)
   end
 end
 
---[[- Returns file descriptor number.
+--[[- Returns the file descriptor number.
 @function getfd
 @tparam lsh.fio.fh self
 @treturn number file descriptor number
 @usage
 local sh = require 'lsh'
 
-print(sh.fio.open('/dev/null'):getfd())
+print(sh.open('/dev/null'):getfd())
 --> 3
 ]]
 function methods.getfd(self)
@@ -339,10 +338,10 @@ local fh_mt = {
   end,
 }
 
---[[- Constructs new file handle and returns it.
+--[[- Constructs a new file handle.
 
-There is no need to use this method directly, see
-@{lsh.memfd} and @{lsh.fio.open} for practical usage.
+You do not need to call this function directly.
+Use @{lsh.memfd} or @{lsh.fio.open}.
 
 @function new
 @tparam cdata fd ljsyscall fd
@@ -350,7 +349,7 @@ There is no need to use this method directly, see
 @usage
 local sh = require 'lsh'
 
-local fh = memfd()
+local fh = sh.memfd()
 ]]
 function _M.new(fd)
   -- TODO: proper check, convert lua file handle

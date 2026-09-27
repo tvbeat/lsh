@@ -1,5 +1,5 @@
---[[- A pipeline builder, providing fine-grained control over
-how new piped processes should be spawned.
+--[[- A pipeline builder. It controls how lsh spawns processes
+that are connected with pipes.
 @module lsh.pipeline
 ]]
 
@@ -24,36 +24,35 @@ local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 -- @section pipeline
 local methods = tablex.new(0, 10)
 
---[[- Returns the type of a instance.
+--[[- Returns the type of the instance.
 @function type
 @return the string `"pipeline"`
 @usage
 local sh = require 'lsh'
 
-assert(sh.cmd('ls'):type() == 'cmd')
+assert(sh.pipeline():type() == 'pipeline')
 ]]
 function methods.type()
   return 'pipeline'
 end
 
---[[- Clones pipeline instance.
+--[[- Clones the pipeline instance.
 @function clone
 @tparam lsh.pipeline self
 @treturn lsh.pipeline new @{pipeline} struct, clone of `self`
 @usage
 local sh = require 'lsh'
 
-local p1 = sh.pipeline():add('ls')
+local p1 = sh.pipeline():add(sh.cmd('ls'))
 local p2 = p1:clone()
 ]]
 function methods.clone(self)
   return tablex.clone(self, true)
 end
 
---[[- Adds @{cmd} instance into pipeline.
+--[[- Adds a @{cmd} instance to the pipeline.
 
-`cmd` instance will be cloned before inserting into
-`pipeline`.
+The pipeline stores a clone of the `cmd` instance.
 
 @function add
 @tparam lsh.pipeline self
@@ -75,8 +74,8 @@ function methods.add(self, cmd)
   error(err_str:format(2, 'add', 'table', type(cmd)), 2)
 end
 
---[[- Executes `cmd`s in a `pipeline` as a `children` processes,
-waiting for it to finish and collecting its exit statuses.
+--[[- Executes the `cmd`s in the `pipeline` as `children` processes,
+waiting for them to finish and collecting their exit statuses.
 
 By default, stdin, stdout and stderr are inherited from the parent.
 
@@ -86,19 +85,18 @@ By default, stdin, stdout and stderr are inherited from the parent.
 @usage
 local sh = require 'lsh'
 
-local status = sh.pipeline():add('ls')
-                            :add('tail')
+local status = sh.pipeline():add(sh.cmd('ls'))
+                            :add(sh.cmd('tail'))
                             :run()
 ]]
 function methods.run(self)
   return children.new(self):wait()
 end
 
---[[- Executes the command as a child processes, waiting for
-it to finish and collecting all of its output.
+--[[- Executes the `cmd`s in the `pipeline` as `children` processes,
+waiting for them to finish and collecting all of their output.
 
-By default, stdout and stderr are captured using `memfd` (and used
-to provide the resulting output)
+By default, the output captures stdout and stderr in `memfd` instances.
 
 @function output
 @tparam lsh.pipeline self
@@ -116,8 +114,8 @@ function methods.output(self)
   return children.new(pl):wait_with_output()
 end
 
---[[- Executes the `cmd`s in a `pipeline` as a `children` processes,
-returning a handle to it.
+--[[- Executes the `cmd`s in the `pipeline` as `children` processes,
+returning a handle to them.
 
 By default, stdin, stdout and stderr are inherited from the parent.
 
@@ -127,8 +125,8 @@ By default, stdin, stdout and stderr are inherited from the parent.
 @usage
 local sh = require 'lsh'
 
-local children = sh.pipeline():add('ls')
-                              :add('tail')
+local children = sh.pipeline():add(sh.cmd('ls'))
+                              :add(sh.cmd('tail'))
                               :spawn()
 local status = children:wait()
 ]]
@@ -146,8 +144,8 @@ child processes.
 local sh = require 'lsh'
 
 sh.pipeline():workdir('/bin')
-             :add('ls')
-             :add('tail')
+             :add(sh.cmd('ls'))
+             :add(sh.cmd('tail'))
              :run()
 ]]
 function methods.workdir(self, wd)
@@ -163,7 +161,7 @@ function methods.workdir(self, wd)
   return self
 end
 
---[[- Sets or unsets the pipeline standard input (stdin) handle.
+--[[- Sets or unsets the standard input (stdin) handle of the pipeline.
 @function stdin
 @param self @{pipeline}
 @tparam[opt] string|userdata|lsh.fio.fh|lsh.path val handle
@@ -172,8 +170,8 @@ value
 @usage
 local sh = require 'lsh'
 
-sh.pipeline():add('tail', '-n1')
-             :add('rev')
+sh.pipeline():add(sh.cmd('tail', '-n1'))
+             :add(sh.cmd('rev'))
              :stdin('/path/to/file')
              :run()
 ]]
@@ -190,7 +188,7 @@ function methods.stdin(self, val)
   return self
 end
 
---[[- Sets or unsets the pipeline standard output (stdout) handle.
+--[[- Sets or unsets the standard output (stdout) handle of the pipeline.
 @function stdout
 @param self @{pipeline}
 @tparam[opt] string|userdata|lsh.fio.fh|lsh.path val handle
@@ -199,8 +197,8 @@ value
 @usage
 local sh = require 'lsh'
 
-sh.pipeline():add('ls', '-l')
-             :add('rev')
+sh.pipeline():add(sh.cmd('ls', '-l'))
+             :add(sh.cmd('rev'))
              :stdout('/dev/null')
              :run()
 ]]
@@ -217,7 +215,7 @@ function methods.stdout(self, val)
   return self
 end
 
---[[- Sets or unsets the pipeline standard error (stderr) handle.
+--[[- Sets or unsets the standard error (stderr) handle of the pipeline.
 @function stderr
 @param self @{pipeline}
 @tparam[opt] string|userdata|lsh.fio.fh|lsh.path val handle
@@ -226,8 +224,8 @@ value
 @usage
 local sh = require 'lsh'
 
-sh.pipeline():add('ls', 'nonexistentfile')
-             :add('rev')
+sh.pipeline():add(sh.cmd('ls', 'nonexistentfile'))
+             :add(sh.cmd('rev'))
              :stderr(io.stdout)
              :run()
 ]]
@@ -256,7 +254,7 @@ local pipeline_mt = {
 
     return table.concat(ret, ' | ')
   end,
-   --[[- Adds @{cmd} instance to pipeline.
+   --[[- Adds a @{cmd} instance to the pipeline.
    @function __div
    @tparam lsh.pipeline l left @{pipeline}
    @tparam lsh.cmd r right @{cmd}
@@ -285,8 +283,8 @@ local _M = tablex.new(0, 1)
 @usage
 local sh = require 'lsh'
 
-sh.pipeline.new():add('echo', 123)
-                 :add('rev')
+sh.pipeline.new():add(sh.cmd('echo', 123))
+                 :add(sh.cmd('rev'))
                  :run()
 ]]
 function _M.new()
@@ -301,8 +299,8 @@ local mt = {
   @usage
   local sh = require 'lsh'
 
-  sh.pipeline():add('echo', 123)
-               :add('rev')
+  sh.pipeline():add(sh.cmd('echo', 123))
+               :add(sh.cmd('rev'))
                :run()
   ]]
   __call = function(_M)

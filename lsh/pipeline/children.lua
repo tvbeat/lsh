@@ -1,4 +1,4 @@
---[[- Representation of a running or exited pipeline's children processes.
+--[[- Representation of the running or exited child processes of a pipeline.
 @module lsh.pipeline.children
 ]]
 
@@ -80,20 +80,21 @@ function methods.type()
   return 'children'
 end
 
---[[- Send a signal to all child processes.
+--[[- Sends a signal to all child processes.
 
-See: @{lsh.cmd.child.kill}
+For the valid signal names, see @{lsh.cmd.child.kill}.
 
 @function kill
 @tparam lsh.pipeline.children self
-@tparam[opt] string signal signal name
-@treturn[1] bool signal status
-@treturn[1] string error message
+@tparam string signal signal name
+@treturn[1] bool `true`
+@treturn[2] nil
+@treturn[2] string error message
 @usage
 local sh = require 'lsh'
 
-local children = sh.pipeline():add('sleep', 10):spawn()
-child:kill()
+local children = sh.pipeline():add(sh.cmd('sleep', 10)):spawn()
+children:kill('term')
 ]]
 function methods.kill(self, signal)
   if type(signal) ~= 'string' then
@@ -113,6 +114,8 @@ end
 --[[- Returns the array of OS-assigned process identifiers
 of all child processes.
 
+Not implemented yet.
+
 @function ids
 @tparam lsh.pipeline.children self
 @treturn table array of process identifiers
@@ -121,11 +124,10 @@ function methods.ids(self)
   error('not implemented')
 end
 
---[[- Waits for all child proceses to exit completely, returning
-the `pstatus` that it exited with.
+--[[- Waits for all child processes to exit completely, returning
+their `pstatus`.
 
-This function will continue to have the same return value
-after it has been called at least once.
+After the first call, this function always returns the same value.
 
 @function wait
 @tparam lsh.pipeline.children self
@@ -143,22 +145,19 @@ end
 --[[- Attempts to collect the exit statuses of the
 child processes if they have already exited.
 
-This function will not block the calling thread and will
-only check to see if the child processes have exited or not.
-If the child processes have exited then process IDs are reaped.
-This function is guaranteed to repeatedly return a successful
-exit status so long as the child processes have already exited.
+This function does not block the calling thread. It only
+checks if the child processes exited.
 
-If all child processes have exited, then @{pstatus} is returned.
-If the exit statuses are not available at this time then `false` is
-returned.
+If all child processes exited, it reaps the process IDs and
+returns @{pstatus}. Later calls return the same @{pstatus}.
+If the exit statuses are not available yet, it returns `false`.
 
 @function try_wait
 @tparam lsh.pipeline.children self
 @treturn[1] lsh.pipeline.pstatus @{pstatus} struct
 @treturn[2] false
 @treturn[3] nil
-@treturn[3] err
+@treturn[3] string error message
 ]]
 function methods.try_wait(self)
   local st, err = pstatus.new(self, false)
@@ -169,20 +168,18 @@ function methods.try_wait(self)
   return st
 end
 
---[[- Simultaneously waits for all child processes to exit and
-collect all remaining output on the stdout/stderr handles,
-returning an `output` struct.
+--[[- Waits for all child processes to exit and returns an `output`
+struct with the stdout and stderr handles of the pipeline.
 
 By default, stdin, stdout and stderr are inherited from the parent.
-In order to capture the output into `output` it is necessary to create
-new `memfd` instances between parent and child. Use `stdout(sh.memfd())`
-or `stderr(sh.memfd())`, respectively.
+To capture the output in `output`, set a `memfd` instance
+with `stdout(sh.memfd())` or `stderr(sh.memfd())`.
 
 @function wait_with_output
 @tparam lsh.pipeline.children self
-@treturn[1] lsh.cmd.children.output @{output} struct
+@treturn[1] lsh.pipeline.children.output @{output} struct
 @treturn[2] nil
-@treturn[2] err
+@treturn[2] string error message
 ]]
 function methods.wait_with_output(self)
   local _pstatus, err = self:wait()
@@ -190,10 +187,10 @@ function methods.wait_with_output(self)
     return nil, err
   end
 
-  --[[- The output of a finished process.
+  --[[- The output of a finished pipeline.
 
-  This is returned by either the @{pipeline.output} method,
-  or the `wait_with_output` method of a `children` instance.
+  The @{pipeline.output} method and the `wait_with_output` method
+  of a `children` instance return this table.
 
   @within Output
   @field stdout stdout of `pipeline` instance (if any)
@@ -227,14 +224,13 @@ local children_mt = {
   end,
 }
 
---[[- Constructs the new `children` handle struct from
-`cmd`s defined in `pipeline` instance and executes it.
+--[[- Constructs a new `children` struct and runs the `cmd`s
+defined in the `pipeline` instance.
 
-Input `cmd` is cloned and contained inside `child` instance
-to be available for introspection.
+Each `child` instance keeps a clone of its `cmd`, so you can inspect it.
 
-There is no need to use this method directly, see @{lsh.pipeline.run} and
-@{lsh.pipeline.spawn} for practical program execution.
+You do not need to call this function directly.
+Use @{lsh.pipeline.run} or @{lsh.pipeline.spawn}.
 
 @tparam lsh.pipeline pl
 @treturn lsh.pipeline.children `children`

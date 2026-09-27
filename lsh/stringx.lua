@@ -80,12 +80,17 @@ end
 
 local _M = tablex.new(0, 2)
 
---[[- Split string by separator.
+--[[- Splits a string by a separator.
 @function split
 @tparam string inp input string
 @tparam[opt] string sep separator (default is whitespace)
-@tparam[opt] int max maximum number of pieces to split into (default is unlimited)
-@treturn {string,...} the pieces between separtors
+@tparam[opt] int max maximum number of splits (default is unlimited)
+@treturn {string,...} the pieces between separators
+@usage
+local sh = require 'lsh'
+
+local parts = sh.stringx.split('a,b,c', ',', 1)
+assert(parts[1] == 'a' and parts[2] == 'b,c')
 ]]
 function _M.split(inp, sep, max)
   -- based on tarantool (2.1): src/lua/string.lua
@@ -107,10 +112,10 @@ function _M.split(inp, sep, max)
   return string_split(inp, sep, max)
 end
 
---[[- Remove any final newline from a string.
+--[[- Removes a final newline from a string.
 @function chomp
 @tparam string inp input string
-@treturn string without trailing newline
+@treturn string string without the final newline
 ]]
 function _M.chomp(inp)
   if type(inp) ~= 'string' then

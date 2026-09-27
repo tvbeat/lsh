@@ -1,8 +1,7 @@
 --[[-- Representation of a running or exited child process.
 
-This module is used to represent and manage child processes.
-A child process is created via the @{lsh.cmd} instance, which configures
-the spawning process and can itself be constructed using a builder-style interface.
+Use this module to manage child processes. A @{lsh.cmd} instance
+holds the configuration of the process and spawns the child.
 
 ### Example
 ```lua
@@ -161,16 +160,16 @@ local methods = tablex.new(0, 6)
 @usage
 local sh = require 'lsh'
 
-assert(sh.cmd('ls'):run().type() == 'child')
+assert(sh.cmd('ls'):spawn():type() == 'child')
 ]]
 function methods.type()
   return 'child'
 end
 
---[[- Sends a child process a signal.
+--[[- Sends a signal to the child process.
 
-By default forces the child process to exit by sending
-`SIGKILL` (`kill`).
+If you do not give a signal, it sends `SIGKILL` (`kill`),
+which forces the child process to exit.
 
 Valid signals: `hup int quit ill trap abrt bus fpe kill
 usr1 segv usr2 pipe alrm term stkflt chld cont stop tstp
@@ -222,8 +221,7 @@ end
 --[[- Waits for the child to exit completely, returning
 the `status` that it exited with.
 
-This function will continue to have the same return value
-after it has been called at least once.
+After the first call, this function always returns the same value.
 
 @function wait
 @tparam lsh.cmd.child self
@@ -246,22 +244,19 @@ end
 --[[- Attempts to collect the exit status of the
 child if it has already exited.
 
-This function will not block the calling thread and will
-only check to see if the child process has exited or not.
-If the child has exited then process ID is reaped. This
-function is guaranteed to repeatedly return a successful
-exit status so long as the child has already exited.
+This function does not block the calling thread. It only
+checks if the child process exited.
 
-If the child has exited, then @{status} is returned.
-If the exit status is not available at this time then `false` is
-returned.
+If the child exited, it reaps the process ID and returns @{status}.
+Later calls return the same @{status}.
+If the exit status is not available yet, it returns `false`.
 
 @function try_wait
 @tparam lsh.cmd.child self
 @treturn[1] lsh.cmd.status @{status} struct
 @treturn[2] false
 @treturn[3] nil
-@treturn[3] err
+@treturn[3] string error message
 @usage
 local sh = require 'lsh'
 
@@ -277,20 +272,18 @@ function methods.try_wait(self)
   return st
 end
 
---[[- Simultaneously waits for the child to exit and
-collect all remaining output on the stdout/stderr handles,
-returning an `output` struct.
+--[[- Waits for the child to exit and returns an `output` struct
+with the stdout and stderr handles of the child.
 
 By default, stdin, stdout and stderr are inherited from the parent.
-In order to capture the output into `output` it is necessary to create
-new `memfd` instances between parent and child. Use `stdout(sh.memfd())`
-or `stderr(sh.memfd())`, respectively.
+To capture the output in `output`, set a `memfd` instance
+with `stdout(sh.memfd())` or `stderr(sh.memfd())`.
 
 @function wait_with_output
 @tparam lsh.cmd.child self
 @treturn[1] lsh.cmd.child.output @{output} struct
 @treturn[2] nil
-@treturn[2] err
+@treturn[2] string error message
 @usage
 local sh = require 'lsh'
 
@@ -315,8 +308,8 @@ function methods.wait_with_output(self)
 
   --[[- The output of a finished process.
 
-  This is returned by either the @{cmd.output} method,
-  or the @{wait_with_output} method of a child process.
+  The @{cmd.output} method and the @{wait_with_output} method
+  of a child process return this table.
 
   @within Output
   @field stdout stdout of `cmd` instance (if any)
@@ -343,11 +336,11 @@ local child_mt = {
   end,
 }
 
---[[- Constructs the new `child` handle instance from
-program defined in `cmd` and executes it.
+--[[- Constructs a new `child` instance and runs the program
+defined in `cmd`.
 
-There is no need to use this method directly, see @{cmd.run} and
-@{cmd.spawn} for practical program execution.
+You do not need to call this function directly.
+Use @{cmd.run} or @{cmd.spawn}.
 
 @tparam lsh.cmd cmd
 @tparam[opt] boolean clone control cloning of input cmd (`true` by default)
@@ -355,7 +348,9 @@ There is no need to use this method directly, see @{cmd.run} and
 @usage
 local sh = require 'lsh'
 
-sh.cmd.child.new(sh.cmd('echo', 1))
+local child = require 'lsh.cmd.child'
+
+child.new(sh.cmd('echo', 1))
 ]]
 function _M.new(cmd, clone)
   if type(cmd) ~= 'table' or not cmd.type or not cmd:type() == 'cmd' then

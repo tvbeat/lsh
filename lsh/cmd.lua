@@ -1,10 +1,9 @@
---[[- A process builder, providing fine-grained control over
-how a new process should be spawned.
+--[[- A process builder. It controls how lsh spawns a new process.
 
-A default configuration can be generated using `cmd.new(program)`,
-where program gives a path to the program to be executed. Additional
-builder methods allow the configuration to be changed (for example,
-by adding arguments) prior to spawning:
+`cmd.new(program)` makes a default configuration, where `program`
+is the name or path of the program to run. Use the builder methods
+to change the configuration (for example, to add arguments) before
+you spawn the process:
 ```lua
 local cmd = require 'lsh.cmd'
 
@@ -16,9 +15,8 @@ if err then error('failed to execute process') end
 local hello = tostring(output.stdout)
 ```
 
-Command can be reused to spawn multiple processes. The builder
-methods change the command without needing to immediately
-spawn the process.
+You can use one command to spawn multiple processes. The builder
+methods change the command, but they do not spawn a process.
 ```lua
 local cmd = require 'lsh.cmd'
 
@@ -33,8 +31,8 @@ local hello_2, err = echo_hello:output()
 if err then error('failed to execute process') end
 ```
 
-Similarly, you can call builder methods after spawning a process
-and then spawn a new process with the modified settings.
+You can also call builder methods after you spawn a process,
+and then spawn a new process with the changed configuration.
 ```lua
 local cmd = require 'lsh.cmd'
 
@@ -52,8 +50,7 @@ local status, err = list_dir:run()
 if err then error('failed to execute process') end
 ```
 
-Commands can be easily chained into @{pipeline}s by using
-slash (**/**) symbol.
+Use the slash (`/`) operator to chain commands into a @{pipeline}.
 ```lua
 local cmd = require 'lsh.cmd'
 
@@ -95,7 +92,7 @@ local err_tbl_str = "bad argument #%d at index #%d to '%s' (%s expected, got %s)
 -- @section cmd
 local methods = tablex.new(0, 14)
 
---[[- Returns the type of a object.
+--[[- Returns the type of the object.
 @function type
 @tparam lsh.cmd self
 @return the string `"cmd"`
@@ -108,7 +105,7 @@ function methods.type()
   return 'cmd'
 end
 
---[[- Clones cmd instance.
+--[[- Clones the cmd instance.
 @function clone
 @tparam lsh.cmd self
 @treturn lsh.cmd new @{cmd} instance, clone of `self`
@@ -159,8 +156,7 @@ end
 --[[- Executes the command as a child process, waiting for
 it to finish and collecting all of its output.
 
-By default, stdout and stderr are captured using `memfd` (and used
-to provide the resulting output)
+By default, the output captures stdout and stderr in `memfd` instances.
 
 @function output
 @tparam lsh.cmd self
@@ -171,12 +167,12 @@ local sh = require 'lsh'
 local output, err = sh.cmd('cat'):arg('file.txt')
                                  :output()
 if not output then error(err) end
-print(("status: %s", output.status)
+print(("status: %s"):format(output.status))
 for line in output.stdout:lines() do
-  io.stdout:write(line)
+  print(line)
 end
 for line in output.stderr:lines() do
-  io.stderr:write(line)
+  io.stderr:write(line, '\n')
 end
 
 assert(output.status:success())
@@ -195,9 +191,9 @@ end
 
 --[[- Adds an argument to pass to the program.
 
-Only one argument can be passed per use.
+Pass one argument per call.
 
-To pass multiple arguments see `args`.
+To pass multiple arguments, see `args`.
 
 @function arg
 @tparam lsh.cmd self
@@ -223,7 +219,7 @@ end
 
 --[[- Adds multiple arguments to pass to the program.
 
-To pass a single argument see `arg`.
+To pass one argument, see `arg`.
 
 @function args
 @tparam lsh.cmd self
@@ -279,7 +275,7 @@ end
 --[[- Adds or updates multiple environment variable mappings.
 @function env
 @tparam lsh.cmd self
-@tparam table envs env/value pairs of environment variables
+@tparam table envs name/value pairs of environment variables
 @treturn lsh.cmd `self`
 @usage
 local sh = require 'lsh'
@@ -424,10 +420,10 @@ local cmd_mt = {
 
     return table.concat(res, ' ')
   end,
-   --[[- Construct pipeline between two @{cmd} instances.
+   --[[- Constructs a pipeline from two @{cmd} instances.
    @function __div
    @tparam lsh.cmd l left @{cmd}
-   @tparam lsh.cmd r righ @{cmd}
+   @tparam lsh.cmd r right @{cmd}
    @treturn lsh.pipeline new @{pipeline} instance
    @usage
    local sh = require 'lsh'
@@ -448,15 +444,15 @@ local cmd_mt = {
 local _M = tablex.new(0, 1)
 
 --[[- Constructs a new @{cmd} for launching the `program`
-with optionial arguments.
+with optional arguments.
 
-Following default configuration will be used:
+The new cmd uses this default configuration:
 
-- inherit the current process's environment
-- inherit the current process's working directory
-- inherit stdin/stdout/stderr
+- Inherit the environment of the current process.
+- Inherit the working directory of the current process.
+- Inherit stdin, stdout and stderr.
 
-If program is not an absolute path, the `PATH` will be searched in an OS-defined way.
+If `program` does not contain a slash, lsh searches `PATH` for it.
 
 @function new
 @tparam string program program name or path to program

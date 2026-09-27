@@ -10,18 +10,18 @@ local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
 local _M = tablex.new(0, 1)
 
---[[- Constructs new in-memory anonymous file and returns
-handle to it.
+--[[- Constructs a new in-memory anonymous file and returns
+a handle to it.
 @function new
-@tparam[opt] cdata|string buf initialize new instance with buffer
-@tparam[opt] int len lenght of the inital buffer (only needed if buf is `cdata`)
+@tparam[opt] cdata|string buf initial content of the new instance
+@tparam[opt] int len length of the initial buffer (required if buf is `cdata`)
 @treturn[1] lsh.fio.fh new @{fio.fh} instance
 @treturn[2] nil
 @treturn[2] string error
 @usage
 local sh = require 'lsh'
 
-local fh = memfd.new()
+local fh = sh.memfd.new()
 fh:write('abc')
 fh:seek(0)
 print(fh)
@@ -56,15 +56,15 @@ local mt = {
   --[[- Shorthand for `new`.
   @function __call
   @tparam table _M module table
-  @tparam[opt] cdata|string buf initial buffer to fill new instance
-  @tparam[opt] int len lenght of the inital buffer (only needed if buf is `cdata`)
+  @tparam[opt] cdata|string buf initial content of the new instance
+  @tparam[opt] int len length of the initial buffer (required if buf is `cdata`)
   @treturn[1] lsh.fio.fh new @{fio.fh} instance
   @treturn[2] nil
   @treturn[2] string error
   @usage
   local sh = require 'lsh'
 
-  local fh = memfd('abc')
+  local fh = sh.memfd('abc')
   fh:seek(0)
   print(fh)
   ]]

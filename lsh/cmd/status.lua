@@ -1,9 +1,8 @@
 --[[-- Describes the result of a process after it has terminated.
 
-This struct is used to represent the exit status of a child process.
-Child processes are created via the @{lsh.cmd} struct and their exit
-status is exposed through the `run` method, or the `wait` method of
-a @{lsh.cmd.child} process.
+This struct holds the exit status of a child process.
+The `run` method of @{lsh.cmd} and the `wait` method of
+@{lsh.cmd.child} return it.
 
 @module lsh.cmd.status
 ]]
@@ -16,7 +15,7 @@ local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 -- @section status
 local methods = tablex.new(0, 3)
 
---[[- Returns the type of a instance.
+--[[- Returns the type of the instance.
 @function type
 @tparam lsh.cmd.status self
 @return the string `"cmd_status"`
@@ -29,10 +28,9 @@ function methods.type()
   return 'cmd_status'
 end
 
---[[- Was termination successful?
+--[[- Returns `true` if the process exited with status zero.
 
-Signal termination is not considered a success,
-and success is defined as a zero exit status.
+If a signal terminated the process, it returns `false`.
 
 @function success
 @tparam lsh.cmd.status self
@@ -59,7 +57,7 @@ end
 
 --[[- Returns the exit code of the process, if any.
 
-It will return `nil` if the process was terminated by a signal.
+If a signal terminated the process, it returns the signal number.
 
 @function code
 @tparam lsh.cmd.status self
@@ -91,15 +89,17 @@ local status_mt = {
   end,
 }
 
---[[- Constructs the new `status` instance.
+--[[- Constructs a new `status` instance.
 
-There is no need to use this method directly, see @{lsh.cmd.run} and
-@{lsh.cmd.spawn} for practical program execution.
+You do not need to call this function directly.
+Use @{lsh.cmd.run} or @{lsh.cmd.spawn}.
 
 @tparam lsh.cmd.child child child instance
-@tparam[opt] bool hang hang by default
+@tparam[opt] bool hang block until the process exits (`false` by default)
 @treturn[1] lsh.cmd.status `status`
-@treturn[2] boolean false if process didn't terminate
+@treturn[2] boolean `false` if the process did not exit yet
+@treturn[3] nil
+@treturn[3] string error message
 ]]
 function _M.new(child, hang)
   if type(child) ~= 'table' then

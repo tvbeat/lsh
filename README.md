@@ -1,21 +1,21 @@
 # lsh
 
-Small Lua shell library.
+Small Lua library for shell scripting.
 
-## Doc
+## Documentation
 
-To get started with writing shell scripts, head over to
+To start writing shell scripts, read the
 [LDoc documentation](https://tvbeat.github.io/lsh/).
 
-## Install and Use (NIX)
+## Install and use (Nix)
 
-Clone this repo, cd into it, then:
+Clone this repository, go into its directory, and run:
 
 ```
 nix profile install .#
 ```
 
-Run lua scripts with wrapper:
+Use the `lsh` wrapper to run Lua scripts:
 
 ```
 lsh <script.lua>
@@ -35,8 +35,7 @@ Test:
 nix develop --command ./bin/lsh test/test.lua
 ```
 
-
-Generate Documentation in `doc/` directory:
+Generate the documentation in the `doc/` directory:
 
 ```
 nix develop --command ldoc .

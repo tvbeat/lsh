@@ -10,19 +10,21 @@ local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
 local _M = tablex.new(0, 1)
 
---[[- Opens a file at path with the options specified by
-flags and mode.
+--[[- Opens the file at `path` with the given `flags` and `mode`.
 
-**This interface is not finalized and it will be changed
-in incompatible ways!**
+This interface is not final. It will change in incompatible ways.
 
 @function open
 @tparam string path path to file
 @tparam table flags flags
 @tparam table mode mode
-@treturn[0] lsh.fio.fh file handle
-@treturn[1] nil
-@treturn[1] string error
+@treturn[1] lsh.fio.fh file handle
+@treturn[2] nil
+@treturn[2] string error
+@usage
+local sh = require 'lsh'
+
+local fh = sh.open('/etc/hostname', 'rdonly')
 ]]
 function _M.open(path, flags, mode)
   if type(path) ~= 'string' then
