@@ -1,4 +1,5 @@
 #!/usr/bin/env luajit
+--# selene: allow(undefined_variable, global_usage) -- `arg` and `_G` of the interpreter
 local sh = require 'lsh'
 
 if not arg[1] then error("specify script") end

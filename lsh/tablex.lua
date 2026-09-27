@@ -7,7 +7,7 @@ local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
 local ok, table_new = pcall(require, 'table.new')
 if not ok or type(table_new) ~= 'function' then
-  table_new = function(narr, nrec) return {} end
+  table_new = function(_narr, _nrec) return {} end
 end
 
 local _M = table_new(0, 7)
@@ -82,6 +82,7 @@ _M.clear = table_clear
 local ok, table_pack = pcall(require, 'table.pack')
 if not ok or type(table_pack) ~= 'function' then
   table_pack = function(...)
+    -- selene: allow(mixed_table)
     return { n = select('#', ...), ... }
   end
 end

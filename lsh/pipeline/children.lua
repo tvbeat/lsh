@@ -120,6 +120,7 @@ Not implemented yet.
 @tparam lsh.pipeline.children self
 @treturn table array of process identifiers
 ]]
+-- selene: allow(unused_variable)
 function methods.ids(self)
   error('not implemented')
 end

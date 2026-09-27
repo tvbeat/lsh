@@ -50,12 +50,41 @@
         doc = pkgs.luajit.pkgs.lsh.doc;
       });
 
+      checks = forAllSystems (pkgs: {
+        lsh = pkgs.luajit.pkgs.lsh;
+        selene =
+          pkgs.runCommand "lsh-selene"
+            {
+              nativeBuildInputs = [ pkgs.selene ];
+            }
+            ''
+              cd ${
+                lib.fileset.toSource {
+                  root = ./.;
+                  fileset = lib.fileset.unions [
+                    (lib.fileset.fromSource pkgs.luajit.pkgs.lsh.src)
+                    ./selene.toml
+                    ./lsh.yml
+                    ./busted.yml
+                  ];
+                }
+              }
+              selene . bin/lsh
+              touch $out
+            '';
+      });
+
+      formatter = forAllSystems (pkgs: pkgs.nixfmt-tree);
+
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           name = "lsh";
 
           inputsFrom = [ pkgs.luajit.pkgs.lsh ];
-          packages = [ pkgs.luajit ];
+          packages = [
+            pkgs.luajit
+            pkgs.selene
+          ];
 
           shellHook = ''
             LUA_PATH="$LUA_PATH;$(pwd)/?.lua"

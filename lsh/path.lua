@@ -206,7 +206,7 @@ sx = sh.path('my/lib').suffixes
 assert(#sx == 0)
 ]]
 function attrs.suffixes(self)
-  local path, ext = self.path
+  local path, ext = self.path, nil
   local ret = {}
 
   while true do

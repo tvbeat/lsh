@@ -1,0 +1,37 @@
+---
+name: busted
+globals:
+  describe:
+    args:
+      - type: string
+      - type: function
+  it:
+    args:
+      - type: string
+      - type: function
+  pending:
+    args:
+      - type: string
+      - required: false
+        type: function
+  before_each:
+    args:
+      - type: function
+  after_each:
+    args:
+      - type: function
+  setup:
+    args:
+      - type: function
+  teardown:
+    args:
+      - type: function
+  finally:
+    args:
+      - type: function
+  spy:
+    any: true
+  stub:
+    any: true
+  mock:
+    any: true

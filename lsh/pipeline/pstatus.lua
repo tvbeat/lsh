@@ -84,7 +84,7 @@ end
 local _M = tablex.new(0, 1)
 local status_mt = {
   __index = methods,
-  __tostring = function(t)
+  __tostring = function(_t)
     error('not implemented')
   end,
 }

@@ -1,0 +1,16 @@
+---
+base: lua51
+name: lsh
+globals:
+  # the lua51 definition requires the message argument, and busted
+  # also uses `assert` as a table (`assert.are.equal`)
+  assert:
+    any: true
+  # the lua51 definitions have no methods on the standard handles
+  io.stderr:
+    any: true
+  io.stdout:
+    any: true
+  # only the standalone interpreter defines `arg`, lsh modules must not use it
+  arg:
+    removed: true

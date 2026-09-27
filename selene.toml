@@ -1,0 +1,9 @@
+std = "lsh+busted"
+
+exclude = ["result*/**", "doc/**", ".direnv/**"]
+
+[lints]
+# one-line `if err then return nil, err end` is the style of this code base
+multiple_statements = "allow"
+# repeated `local ok, ... = pcall(require, ...)` feature checks
+shadowing = "allow"

@@ -68,7 +68,7 @@ local mt = {
   fh:seek(0)
   print(fh)
   ]]
-  __call = function(t, buf, len)
+  __call = function(_t, buf, len)
     return _M.new(buf, len)
   end,
 }
