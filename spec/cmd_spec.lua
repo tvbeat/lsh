@@ -48,6 +48,19 @@ describe('cmd', function()
     assert.are.equal(0, child:wait():code())
   end)
 
+  it('exits the child with 127 when exec fails', function()
+    local out = sh.cmd('lsh-no-such-program'):output()
+    assert.are.equal(127, out.status:code())
+    assert.are.equal('lsh-no-such-program: exec: No such file or directory', tostring(out.stderr))
+    assert.are.equal('', tostring(out.stdout))
+  end)
+
+  it('exits the child with 127 when the workdir is missing', function()
+    -- chdir happens before the stdio redirection, so the error goes to the parent stderr
+    local status = sh.cmd('true'):workdir(dir / 'none'):run()
+    assert.are.equal(127, status:code())
+  end)
+
   it('sets environment variables', function()
     local out = sh.cmd('printenv', 'MYENV'):env({MYENV = 'test'}):output()
     assert.are.equal('test', tostring(out.stdout))

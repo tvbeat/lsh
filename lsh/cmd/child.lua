@@ -96,7 +96,7 @@ end
 local function child_workdir(path)
   local ok, err = path:chdir()
   if not ok then
-    error(("unable to change child workdir: %s"):format(err))
+    error(("unable to change child workdir: %s"):format(err), 0)
   end
 end
 
@@ -124,19 +124,25 @@ local function exec_cmd(cmd)
   local pid = S.fork()
 
   if pid == 0 then
-    if cmd._workdir then child_workdir(cmd._workdir) end
+    -- the forked child must never return into the parent's Lua code
+    local _, err = pcall(function()
+      if cmd._workdir then child_workdir(cmd._workdir) end
 
-    if cmd._stdin  then child_stdin(cmd._stdin)  end
-    if cmd._stdout then child_stdout(cmd._stdout) end
-    if cmd._stderr then child_stderr(cmd._stderr) end
+      if cmd._stdin  then child_stdin(cmd._stdin)  end
+      if cmd._stdout then child_stdout(cmd._stdout) end
+      if cmd._stderr then child_stderr(cmd._stderr) end
 
-    fd_close_from(3)
+      fd_close_from(3)
 
-    -- if the parent dies, the children die
-    S.prctl("set_pdeathsig", "kill")
+      -- if the parent dies, the children die
+      S.prctl("set_pdeathsig", "kill")
 
-    local _, err = libc.execvpe(cmd._program, cmd._args, cmd._envs)
-    error("exec: "..err)
+      local _, err = libc.execvpe(cmd._program, cmd._args, cmd._envs)
+      error("exec: "..err, 0)
+    end)
+    io.stderr:write(("%s: %s\n"):format(cmd._program, tostring(err)))
+    io.stderr:flush()
+    S.exit(127)
   end
 
   return pid
