@@ -583,7 +583,7 @@ It also returns `false` if the path does not exist.
 @treturn[2] false
 ]]
 function methods.is_link(self)
-  local st = self:stat()
+  local st = S.lstat(self.path)
   if st and st.islnk then
     return self
   end
