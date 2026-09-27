@@ -8,6 +8,7 @@ local tablex = require 'lsh.tablex'
 
 ffi.cdef [[
   char *strerror(int errnum);
+  void _exit(int status);
   // Function signature is modified to avoid casting step
   // ("const char*" -> "char *const").
   int execvpe(const char *file, const char*const [], const char*const []);
@@ -34,7 +35,14 @@ local function ffi_error()
   return ffi.string(C.strerror(ffi.errno()))
 end
 
-local _M = tablex.new(0, 2)
+local _M = tablex.new(0, 3)
+
+--[[- Terminates the process immediately, without flushing stdio buffers.
+@tparam number status exit status
+]]
+function _M._exit(status)
+  C._exit(status)
+end
 
 --[[- Executes the program with args and environment using execvpe.
 @tparam string program program to execute

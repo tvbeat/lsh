@@ -61,6 +61,18 @@ describe('cmd', function()
     assert.are.equal(127, status:code())
   end)
 
+  it('does not flush parent stdio buffers from a failed child', function()
+    local script = [[
+      local sh = require 'lsh'
+      io.stdout:setvbuf('full')
+      io.stdout:write('mark\n')
+      sh.cmd('cat'):stdin('/lsh-no-such-file'):stderr('/dev/null'):run()
+      sh.cmd('lsh-no-such-program'):stderr('/dev/null'):run()
+    ]]
+    local out = sh.cmd('luajit', '-e', script):env({LUA_PATH = package.path}):output()
+    assert.are.equal('mark', tostring(out.stdout))
+  end)
+
   it('sets environment variables', function()
     local out = sh.cmd('printenv', 'MYENV'):env({MYENV = 'test'}):output()
     assert.are.equal('test', tostring(out.stdout))

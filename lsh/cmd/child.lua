@@ -39,7 +39,7 @@ local function child_stdin(stdin)
       local fh, err = stdin:open('rdonly', 'RUSR')
       if err then
         io.stderr:write(err..'\n')
-        os.exit(1)
+        libc._exit(1)
       end
       stdin = fh
     end
@@ -58,7 +58,7 @@ local function child_stdout(stdout)
       local fh, err = stdout:open(flags_cwt, mode_urwgror)
       if err then
         io.stderr:write(err..'\n')
-        os.exit(1)
+        libc._exit(1)
       end
       stdout = fh
     end
@@ -79,7 +79,7 @@ local function child_stderr(stderr)
       local fh, err = stderr:open(flags_cwt, mode_urwgror)
       if err then
         io.stderr:write(err..'\n')
-        os.exit(1)
+        libc._exit(1)
       end
       stderr = fh
     end
@@ -142,7 +142,7 @@ local function exec_cmd(cmd)
     end)
     io.stderr:write(("%s: %s\n"):format(cmd._program, tostring(err)))
     io.stderr:flush()
-    S.exit(127)
+    libc._exit(127)
   end
 
   return pid
