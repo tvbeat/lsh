@@ -233,7 +233,7 @@ sh.cmd('ls'):args({'-a', '-l'})
 ]]
 function methods.args(self, args)
   if type(args) ~= 'table' then
-    error(err_str:format(2, 'args', 'table', type(arg)), 2)
+    error(err_str:format(2, 'args', 'table', type(args)), 2)
   end
   for i=1,#args do
     local arg = norm_arg(args[i])
