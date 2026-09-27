@@ -107,7 +107,7 @@ function methods.output(self)
   if not pl._stdout then
     pl:stdout(memfd.new())
   end
-  if not pl._stdout then
+  if not pl._stderr then
     pl:stderr(memfd.new())
   end
 
