@@ -50,6 +50,7 @@
           meta = with lib; {
             description = "Small Lua shell library";
             homepage = "https://github.com/tvbeat/lsh";
+            license = licenses.mit;
           };
         };
 

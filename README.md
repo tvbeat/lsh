@@ -41,3 +41,7 @@ Generate Documentation in `doc/` directory:
 ```
 nix develop --command ldoc .
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE).

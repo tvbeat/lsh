@@ -1,6 +1,7 @@
 --[[- The lsh, powerful lua shell scripting toolbelt.
 @author Luka Blašković <lblasc at tvbeat.com>
-@copyright 2018-2021
+@copyright 2018-2026 TVbeat
+@license MIT
 @module lsh
 ]]
 
