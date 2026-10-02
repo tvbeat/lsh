@@ -249,6 +249,23 @@ function methods.args(self, args)
   return self
 end
 
+--[[- Returns the number of arguments passed to the program.
+
+The program name is not counted.
+
+@function arg_len
+@tparam lsh.cmd self
+@treturn number number of arguments
+@usage
+local sh = require 'lsh'
+
+assert(sh.cmd('find'):arg_len() == 0)
+assert(sh.cmd('find', '.'):arg_len() == 1)
+]]
+function methods.arg_len(self)
+  return #self._args
+end
+
 --[[- Sets or updates the working directory for the child process.
 @function workdir
 @tparam lsh.cmd self

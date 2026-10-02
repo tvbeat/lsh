@@ -20,6 +20,13 @@ describe('cmd', function()
     assert.are.equal('echo 1 /tmp bla', tostring(cmd))
   end)
 
+  it('counts arguments', function()
+    assert.are.equal(0, sh.cmd('find'):arg_len())
+    assert.are.equal(1, sh.cmd('find', '.'):arg_len())
+    assert.are.equal(3, sh.cmd('find', '.'):args({'-name', '*.lua'}):arg_len())
+    assert.are.equal(2, sh.cmd('find', '.'):arg('-ls'):clone():arg_len())
+  end)
+
   it('quotes arguments in tostring', function()
     local cmd = sh.cmd('ls', 'dir name', "it's", '')
     assert.are.equal([[ls 'dir name' 'it'\''s' '']], tostring(cmd))
