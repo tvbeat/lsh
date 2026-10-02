@@ -68,6 +68,7 @@ if err then error('failed to execute pipeline processes') end
 local S = require 'syscall'
 
 local tablex   = require 'lsh.tablex'
+local stringx  = require 'lsh.stringx'
 local path     = require 'lsh.path'
 local pipeline = require 'lsh.pipeline'
 local memfd    = require 'lsh.memfd'
@@ -413,9 +414,9 @@ local cmd_mt = {
   __tostring = function(t)
     local args_len = #t._args
     local res = tablex.new(args_len + 1, 0)
-    table.insert(res, t._program)
+    table.insert(res, stringx.quote(tostring(t._program)))
     for i=1,args_len do
-      table.insert(res, tostring(t._args[i]))
+      table.insert(res, stringx.quote(tostring(t._args[i])))
     end
 
     return table.concat(res, ' ')
