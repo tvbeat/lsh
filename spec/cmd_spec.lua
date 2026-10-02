@@ -20,6 +20,11 @@ describe('cmd', function()
     assert.are.equal('echo 1 /tmp bla', tostring(cmd))
   end)
 
+  it('quotes arguments in tostring', function()
+    local cmd = sh.cmd('ls', 'dir name', "it's", '')
+    assert.are.equal([[ls 'dir name' 'it'\''s' '']], tostring(cmd))
+  end)
+
   it('runs a command', function()
     assert.is_true(sh.cmd('true'):run():success())
     assert.is_false(sh.cmd('false'):run():success())

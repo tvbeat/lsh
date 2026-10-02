@@ -19,6 +19,11 @@ local isspace = ffi.C.isspace
 
 local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
 
+local quote_safe = {}
+for c in ('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@%+=:,./_-'):gmatch('.') do
+  quote_safe[c:byte()] = true
+end
+
 local function string_split_empty(inp, maxsplit)
   local p = c_char_ptr(inp)
   local p_end = p + #inp
@@ -123,6 +128,38 @@ function _M.chomp(inp)
   end
 
   return inp:gsub('\n$', '')
+end
+
+--[[- Quotes a string for use as a single POSIX shell word.
+
+A string made only of characters that are safe in a shell word
+is returned unchanged.
+@function quote
+@tparam string inp input string
+@treturn string quoted string
+@usage
+local sh = require 'lsh'
+
+assert(sh.stringx.quote('dir name') == "'dir name'")
+assert(sh.stringx.quote("it's") == "'it'\\''s'")
+]]
+function _M.quote(inp)
+  if type(inp) ~= 'string' then
+    error(err_str:format(1, 'quote', 'string', type(inp)), 2)
+  end
+
+  -- a byte loop is JIT-compiled, unlike string.find with a pattern
+  local len = #inp
+  if len > 0 then
+    local i = 1
+    while i <= len and quote_safe[inp:byte(i)] do i = i + 1 end
+    if i > len then return inp end
+  end
+
+  if not inp:find("'", 1, true) then
+    return ("'%s'"):format(inp)
+  end
+  return ("'%s'"):format((inp:gsub("'", [['\'']])))
 end
 
 return _M
