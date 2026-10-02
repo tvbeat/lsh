@@ -25,6 +25,8 @@ ffi.cdef [[
 
   int  glob(const char *__restrict, int, int (*)(const char *, int), glob_t *__restrict);
   void globfree(glob_t *);
+
+  long syscall(long number, ...);
 ]]
 
 local C = ffi.C
@@ -35,13 +37,55 @@ local function ffi_error(errnum)
   return ffi.string(C.strerror(errnum or ffi.errno()))
 end
 
-local _M = tablex.new(0, 3)
+local _M = tablex.new(0, 5)
 
 --[[- Terminates the process immediately, without flushing stdio buffers.
 @tparam number status exit status
 ]]
 function _M._exit(status)
   C._exit(status)
+end
+
+local uint_t = ffi.typeof('unsigned int')
+-- not in ljsyscall; mips adds an ABI offset, so there it fails with ENOSYS
+local SYS_close_range = 436
+
+--[[- Closes all file descriptors from `lowfd` up using close_range(2).
+
+Needs Linux 5.9 or newer.
+@tparam number lowfd lowest file descriptor to close
+@treturn[1] boolean `true`
+@treturn[2] nil
+@treturn[2] string error message
+]]
+function _M.close_range(lowfd)
+  if C.syscall(SYS_close_range, uint_t(lowfd), uint_t(0xffffffff), uint_t(0)) ~= 0 then
+    return nil, ffi_error()
+  end
+
+  return true
+end
+
+--[[- Calls `fn` and retries it once after a full garbage collection
+if it fails because the process or system file descriptor limit
+is reached.
+
+Unreferenced file handles are only closed by the garbage collector,
+which can run too late when many short-lived handles are opened.
+
+`fn` must return a value, or `nil` and a `syscall` error object.
+@tparam func fn function to call
+@param ... arguments passed to `fn`
+@return the return values of `fn`
+]]
+function _M.retry_nofile(fn, ...)
+  local res, err = fn(...)
+  if res == nil and err and (err.MFILE or err.NFILE) then
+    collectgarbage()
+    res, err = fn(...)
+  end
+
+  return res, err
 end
 
 --[[- Executes the program with args and environment using execvpe.

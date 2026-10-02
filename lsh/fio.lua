@@ -4,6 +4,7 @@
 local S = require 'syscall'
 
 local fh     = require 'lsh.fio.fh'
+local libc   = require 'lsh.libc'
 local tablex = require 'lsh.tablex'
 
 local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
@@ -40,7 +41,7 @@ function _M.open(path, flags, mode)
   table.insert(flags, 'cloexec')
 
   -- TODO
-  local fd, err = S.open(path, table.concat(flags, ', '), table.concat(mode, ', '))
+  local fd, err = libc.retry_nofile(S.open, path, table.concat(flags, ', '), table.concat(mode, ', '))
   if err then
     return nil, tostring(err)
   end

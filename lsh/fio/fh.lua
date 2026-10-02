@@ -21,7 +21,10 @@ local function fh_str(fh)
 
   local i = 1
   while true do
-    local part = fh:read()
+    local part, err = fh:read()
+    if not part then
+      error(err, 2)
+    end
     if part == '' then
       if i > 1 then
         res[i-1] = stringx.chomp(res[i-1])
