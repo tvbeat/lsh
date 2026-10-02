@@ -912,7 +912,7 @@ end
 function methods.lsdir(self)
   local size = pagesize
   local buf = S.t.buffer(size)
-  local fd, err = S.open(self.path, 'directory, rdonly')
+  local fd, err = libc.retry_nofile(S.open, self.path, 'directory, rdonly')
   if err then return nil, tostring(err) end
 
   return dir_next, {size = size,

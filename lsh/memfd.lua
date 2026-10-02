@@ -4,6 +4,7 @@
 local S = require 'syscall'
 
 local fh     = require 'lsh.fio.fh'
+local libc   = require 'lsh.libc'
 local tablex = require 'lsh.tablex'
 
 local err_str = "bad argument #%d to '%s' (%s expected, got %s)"
@@ -28,7 +29,7 @@ print(fh)
 ]]
 function _M.new(buf, len)
 
-  local fd, err = S.memfd_create('', 'cloexec')
+  local fd, err = libc.retry_nofile(S.memfd_create, '', 'cloexec')
   if err then
     return nil, tostring(err)
   end

@@ -181,10 +181,14 @@ assert(output.status:success())
 function methods.output(self)
   local _cmd = self:clone()
   if not _cmd._stdout then
-    _cmd:stdout(memfd.new())
+    local fh, err = memfd.new()
+    if not fh then return nil, err end
+    _cmd:stdout(fh)
   end
   if not _cmd._stderr then
-    _cmd:stderr(memfd.new())
+    local fh, err = memfd.new()
+    if not fh then return nil, err end
+    _cmd:stderr(fh)
   end
 
   return child.new(_cmd, false):wait_with_output()

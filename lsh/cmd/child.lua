@@ -104,11 +104,19 @@ end
 -- with mounted /proc
 -- reference: https://github.com/openssh/openssh-portable/blob/master/openbsd-compat/bsd-closefrom.c
 local function fd_close_from(lowfd)
+  -- close_range needs no free fd, the /proc scan is for kernels older than 5.9
+  if libc.close_range(lowfd) then
+    return
+  end
+
   local proc_fd_dir = path('/proc', S.getpid(), 'fd')
   if not proc_fd_dir:is_dir() then
     error('/proc is not mounted')
   end
   local _, dir_obj = proc_fd_dir:lsdir()
+  if type(dir_obj) ~= 'table' then
+    error(("unable to list %s: %s"):format(proc_fd_dir, dir_obj), 0)
+  end
   local dir_fd = dir_obj.fd:getfd()
   while true do
     local dent = dir_obj:next()
